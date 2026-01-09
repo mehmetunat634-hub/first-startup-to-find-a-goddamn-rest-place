@@ -198,7 +198,7 @@ export default function LoginForm() {
       </div>
 
       <div className="signup-prompt">
-        Don't have an account? <a href="/register">Sign up</a>
+        Don&apos;t have an account? <a href="/register">Sign up</a>
       </div>
     </form>
   )
