@@ -1099,3 +1099,297 @@ body {
     justify-content: flex-end;
   }
 }
+
+/* Video Call Page Styles */
+.video-call-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 2rem;
+}
+
+.video-call-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  text-align: center;
+  padding: 4rem 2rem;
+  flex: 1;
+}
+
+.video-call-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.video-call-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #262626;
+  margin: 0;
+}
+
+.video-call-subtitle {
+  font-size: 1.1rem;
+  color: #a0a0a0;
+  margin: 0;
+  max-width: 400px;
+}
+
+.video-call-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.video-call-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+}
+
+.video-call-button:active {
+  transform: translateY(0);
+}
+
+.video-call-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  max-width: 300px;
+  font-size: 0.95rem;
+  color: #262626;
+}
+
+.video-call-info p {
+  margin: 0;
+}
+
+.video-call-active {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 1rem;
+  height: 100%;
+  position: relative;
+}
+
+.video-call-remote {
+  grid-column: 1;
+  grid-row: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.remote-video-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  padding: 2rem;
+  position: relative;
+}
+
+.remote-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 3rem;
+  font-weight: bold;
+}
+
+.remote-info {
+  text-align: center;
+  color: white;
+}
+
+.remote-info h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4ade80;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.call-duration {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.video-call-local {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.local-video-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.local-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.video-call-controls {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.control-button.decline {
+  background-color: #d93026;
+  color: white;
+}
+
+.control-button.decline:hover {
+  background-color: #c92817;
+  transform: scale(1.05);
+}
+
+.control-button.skip {
+  background-color: #f0f0f0;
+  color: #262626;
+}
+
+.control-button.skip:hover {
+  background-color: #e0e0e0;
+  transform: scale(1.05);
+}
+
+.control-button:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .video-call-container {
+    padding: 1rem;
+  }
+
+  .video-call-welcome {
+    padding: 2rem 1rem;
+  }
+
+  .video-call-title {
+    font-size: 1.8rem;
+  }
+
+  .video-call-active {
+    grid-template-rows: 1fr 80px auto;
+  }
+
+  .remote-avatar {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+
+  .remote-info h2 {
+    font-size: 1.2rem;
+  }
+
+  .local-video-container {
+    height: 80px;
+  }
+
+  .local-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 0.9rem;
+  }
+
+  .control-button {
+    width: 50px;
+    height: 50px;
+  }
+}

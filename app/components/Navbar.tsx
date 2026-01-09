@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Newspaper, Compass, Settings, LogOut, User } from 'lucide-react'
+import { Newspaper, Compass, Settings, LogOut, User, Video } from 'lucide-react'
 
 export default function Navbar() {
   const router = useRouter()
@@ -37,6 +37,10 @@ export default function Navbar() {
     }
   }
 
+  const handleVideoCall = () => {
+    router.push('/video-call')
+  }
+
   return (
     <nav className="navbar">
       <div className="navbar-top">
@@ -51,6 +55,10 @@ export default function Navbar() {
             <Newspaper className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Feed</span>
           </a>
+          <button className="navbar-link" onClick={handleVideoCall}>
+            <Video className="navbar-link-icon" size={24} />
+            <span className="navbar-link-text">Video Call</span>
+          </button>
         </div>
       </div>
 
