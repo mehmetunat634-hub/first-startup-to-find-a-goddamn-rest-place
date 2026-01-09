@@ -21,7 +21,7 @@ interface FeedPost {
   caption: string
   videoUrl: string
   thumbnailUrl: string | null
-  price: number
+  price?: number
   taggedUsers: string
   likes: number
   comments: number
@@ -165,17 +165,20 @@ export default function FeedPage() {
                       className="post-video"
                       style={{ width: '100%', display: 'block' }}
                     />
-                    {post.price > 0 && (
-                      <div className="post-buy-section">
-                        <div className="buy-info">
-                          <span className="video-price">${post.price.toFixed(2)}</span>
-                          <p className="buy-label">Exclusive Content</p>
+                    {(() => {
+                      const price = post.price ?? 0
+                      return price > 0 ? (
+                        <div className="post-buy-section">
+                          <div className="buy-info">
+                            <span className="video-price">${typeof price === 'number' ? price.toFixed(2) : '0.00'}</span>
+                            <p className="buy-label">Exclusive Content</p>
+                          </div>
+                          <button className="buy-button">
+                            🛒 Buy Video
+                          </button>
                         </div>
-                        <button className="buy-button">
-                          🛒 Buy Video
-                        </button>
-                      </div>
-                    )}
+                      ) : null
+                    })()}
                   </div>
 
                   {/* Post Actions */}

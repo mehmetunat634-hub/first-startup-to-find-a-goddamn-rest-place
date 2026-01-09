@@ -27,7 +27,7 @@ interface UserPost {
   caption: string
   videoUrl: string
   thumbnailUrl: string | null
-  price: number
+  price?: number
   taggedUsers: string
   likes: number
   comments: number
@@ -361,9 +361,12 @@ export default function ProfilePage() {
                         />
                         <div className="post-card-overlay">
                           <div className="post-card-info">
-                            {post.price && post.price > 0 && (
-                              <span className="post-price">${typeof post.price === 'number' ? post.price.toFixed(2) : '0.00'}</span>
-                            )}
+                            {(() => {
+                              const price = post.price ?? 0
+                              return price > 0 ? (
+                                <span className="post-price">${typeof price === 'number' ? price.toFixed(2) : '0.00'}</span>
+                              ) : null
+                            })()}
                             <span className="post-likes">❤️ {post.likes}</span>
                           </div>
                         </div>
