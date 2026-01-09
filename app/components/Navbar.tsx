@@ -45,16 +45,21 @@ export default function Navbar() {
     router.push('/feed')
   }
 
+  const handleExplore = () => {
+    // TODO: Implement explore page
+    router.push('/explore')
+  }
+
   return (
     <nav className="navbar">
       <div className="navbar-top">
         <div className="navbar-logo">instagram</div>
 
         <div className="navbar-links">
-          <a href="#" className="navbar-link">
+          <button className="navbar-link" onClick={handleExplore}>
             <Compass className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Explore</span>
-          </a>
+          </button>
           <button className="navbar-link" onClick={handleFeed}>
             <Newspaper className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Feed</span>
