@@ -504,6 +504,11 @@ body {
 .home-main {
   flex: 1;
   margin-left: 250px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 
 @media (max-width: 768px) {
@@ -526,13 +531,18 @@ body {
 
   .home-main {
     margin-left: 0;
+    padding: 1rem;
+  }
+
+  .profile-container {
+    max-width: 100%;
   }
 }
 
 /* Profile Page Styles */
 .profile-container {
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 1000px;
   background: white;
   border-radius: 12px;
   overflow: hidden;
@@ -543,7 +553,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.5rem 2rem;
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -587,7 +597,7 @@ body {
 }
 
 .profile-content {
-  padding: 0 1.5rem 1.5rem;
+  padding: 0 2rem 2rem;
 }
 
 .profile-top-section {
@@ -733,8 +743,8 @@ body {
 
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
 }
 
 .post-thumbnail {
@@ -773,7 +783,8 @@ body {
   }
 
   .posts-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 
   .profile-actions {
@@ -783,7 +794,7 @@ body {
 
 /* Settings Page Styles */
 .settings-content {
-  padding: 1.5rem;
+  padding: 2rem;
 }
 
 .settings-section {
