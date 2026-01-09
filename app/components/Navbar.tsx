@@ -33,7 +33,7 @@ export default function Navbar() {
 
   const handleProfileClick = () => {
     if (username) {
-      router.push(`/profile/@${username}`)
+      router.push(`/profile/${username}`)
     }
   }
 

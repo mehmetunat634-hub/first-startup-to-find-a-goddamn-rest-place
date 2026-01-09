@@ -9,6 +9,10 @@ interface UserProfile {
   username: string
   email: string
   displayName: string
+  firstName: string
+  lastName: string
+  avatar: string
+  bio: string
 }
 
 export default function SettingsPage() {
@@ -40,6 +44,10 @@ export default function SettingsPage() {
         username: parsed.username,
         email: parsed.email || `${parsed.username}@instagram.com`,
         displayName: parsed.username.charAt(0).toUpperCase() + parsed.username.slice(1),
+        firstName: parsed.firstName || parsed.username.charAt(0).toUpperCase() + parsed.username.slice(1),
+        lastName: parsed.lastName || 'User',
+        avatar: parsed.username.charAt(0).toUpperCase(),
+        bio: parsed.bio || 'Instagram user',
       })
     }
 
@@ -76,7 +84,7 @@ export default function SettingsPage() {
   }
 
   const handleUsernameClick = () => {
-    router.push(`/profile/@${user.username}`)
+    router.push(`/profile/${user.username}`)
   }
 
   return (
@@ -100,28 +108,51 @@ export default function SettingsPage() {
             {/* User Info Section */}
             <div className="settings-section">
               <h3 className="settings-section-title">Account Information</h3>
-              <div className="settings-user-info">
-                <div className="settings-user-item">
-                  <span className="settings-label">Display Name</span>
-                  <button
-                    className="settings-user-link"
-                    onClick={handleUsernameClick}
-                  >
-                    {user.displayName}
-                  </button>
+              <div className="settings-user-profile">
+                <div className="settings-avatar-section">
+                  <div className="settings-avatar-large">
+                    {user.avatar}
+                  </div>
+                </div>
+                <div className="settings-user-info">
+                  <div className="settings-user-item">
+                    <span className="settings-label">Display Name</span>
+                    <button
+                      className="settings-user-link"
+                      onClick={handleUsernameClick}
+                    >
+                      {user.displayName}
+                    </button>
+                  </div>
+                  <div className="settings-user-item">
+                    <span className="settings-label">Username</span>
+                    <button
+                      className="settings-user-link"
+                      onClick={handleUsernameClick}
+                    >
+                      @{user.username}
+                    </button>
+                  </div>
+                  <div className="settings-user-item">
+                    <span className="settings-label">Email</span>
+                    <span className="settings-value">{user.email}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="settings-user-details">
+                <div className="settings-details-row">
+                  <div className="settings-user-item">
+                    <span className="settings-label">First Name</span>
+                    <span className="settings-value">{user.firstName}</span>
+                  </div>
+                  <div className="settings-user-item">
+                    <span className="settings-label">Last Name</span>
+                    <span className="settings-value">{user.lastName}</span>
+                  </div>
                 </div>
                 <div className="settings-user-item">
-                  <span className="settings-label">Username</span>
-                  <button
-                    className="settings-user-link"
-                    onClick={handleUsernameClick}
-                  >
-                    @{user.username}
-                  </button>
-                </div>
-                <div className="settings-user-item">
-                  <span className="settings-label">Email</span>
-                  <span className="settings-value">{user.email}</span>
+                  <span className="settings-label">Bio</span>
+                  <span className="settings-value">{user.bio}</span>
                 </div>
               </div>
             </div>

@@ -213,12 +213,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Cover Image */}
-          <div
-            className="profile-cover"
-            style={{ background: profile.coverImage }}
-          ></div>
-
           {/* Profile Info */}
           <div className="profile-content">
             {/* Avatar and Basic Info */}
@@ -281,7 +275,6 @@ export default function ProfilePage() {
             {/* Action Buttons */}
             <div className="profile-actions">
               <button className="action-button primary">Follow</button>
-              <button className="action-button secondary">Message</button>
             </div>
 
             {/* Posts Section */}

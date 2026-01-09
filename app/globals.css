@@ -622,9 +622,8 @@ body {
 
 .profile-top-section {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 1.5rem;
-  margin-top: -50px;
   margin-bottom: 1.5rem;
 }
 
@@ -888,10 +887,54 @@ body {
   font-weight: 600;
 }
 
+.settings-user-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-avatar-section {
+  display: flex;
+  justify-content: center;
+}
+
+.settings-avatar-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
 .settings-user-info {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex: 1;
+}
+
+.settings-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-details-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.settings-details-row .settings-user-item {
+  flex: 1;
 }
 
 .settings-user-item {
