@@ -41,6 +41,10 @@ export default function Navbar() {
     router.push('/video-call')
   }
 
+  const handleFeed = () => {
+    router.push('/feed')
+  }
+
   return (
     <nav className="navbar">
       <div className="navbar-top">
@@ -51,10 +55,10 @@ export default function Navbar() {
             <Compass className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Explore</span>
           </a>
-          <a href="#" className="navbar-link">
+          <button className="navbar-link" onClick={handleFeed}>
             <Newspaper className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Feed</span>
-          </a>
+          </button>
           <button className="navbar-link" onClick={handleVideoCall}>
             <Video className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Video Call</span>

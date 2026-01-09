@@ -45,6 +45,18 @@ db.exec(`
     FOREIGN KEY (from_user_id) REFERENCES users(id),
     FOREIGN KEY (to_user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS posts (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    caption TEXT DEFAULT '',
+    imageUrl TEXT NOT NULL,
+    likes INTEGER DEFAULT 0,
+    comments INTEGER DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id)
+  );
 `)
 
 export interface User {
@@ -269,4 +281,78 @@ export function getVideoSignalsForUser(sessionId: string, userId: string): Video
 export function deleteVideoSignals(sessionId: string): void {
   const stmt = db.prepare('DELETE FROM video_signals WHERE session_id = ?')
   stmt.run(sessionId)
+}
+
+// Post functions
+export interface Post {
+  id: string
+  userId: string
+  caption: string
+  imageUrl: string
+  likes: number
+  comments: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PostWithUser extends Post {
+  user?: UserPublic
+}
+
+export function createPost(userId: string, caption: string, imageUrl: string): Post {
+  const postId = Math.random().toString(36).substr(2, 12)
+  const stmt = db.prepare(`
+    INSERT INTO posts (id, userId, caption, imageUrl)
+    VALUES (?, ?, ?, ?)
+  `)
+  stmt.run(postId, userId, caption, imageUrl)
+  return getPostById(postId)!
+}
+
+export function getPostById(postId: string): Post | null {
+  const stmt = db.prepare('SELECT * FROM posts WHERE id = ?')
+  return stmt.get(postId) as Post | null
+}
+
+export function getPostsByUserId(userId: string): Post[] {
+  const stmt = db.prepare(`
+    SELECT * FROM posts
+    WHERE userId = ?
+    ORDER BY createdAt DESC
+  `)
+  return stmt.all(userId) as Post[]
+}
+
+export function getAllPosts(limit: number = 50, offset: number = 0): Post[] {
+  const stmt = db.prepare(`
+    SELECT * FROM posts
+    ORDER BY createdAt DESC
+    LIMIT ? OFFSET ?
+  `)
+  return stmt.all(limit, offset) as Post[]
+}
+
+export function updatePostLikes(postId: string, increment: boolean = true): Post | null {
+  const post = getPostById(postId)
+  if (!post) return null
+
+  const newLikes = increment ? post.likes + 1 : Math.max(0, post.likes - 1)
+  const stmt = db.prepare(`
+    UPDATE posts
+    SET likes = ?, updatedAt = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `)
+  stmt.run(newLikes, postId)
+  return getPostById(postId)
+}
+
+export function getPostsWithUsers(limit: number = 50, offset: number = 0): PostWithUser[] {
+  const posts = getAllPosts(limit, offset)
+  return posts.map(post => {
+    const user = getUserById(post.userId)
+    return {
+      ...post,
+      user: user ? removeUserPassword(user) : undefined,
+    }
+  })
 }
