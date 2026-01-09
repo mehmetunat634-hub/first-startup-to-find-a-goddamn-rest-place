@@ -30,18 +30,30 @@ function seedDatabase() {
     res.on('end', () => {
       try {
         const json = JSON.parse(data)
+
+        if (res.statusCode !== 200) {
+          console.error('❌ Seeding failed:', json.error || 'Unknown error')
+          if (json.details) console.error('   Details:', json.details)
+          return
+        }
+
         console.log('\n✅ Database seeded successfully!\n')
         console.log('📊 Statistics:')
-        console.log(`   - Users created: ${json.stats.usersCreated}`)
-        console.log(`   - Total users: ${json.stats.totalUsers}`)
-        console.log(`   - Posts created: ${json.stats.postsCreated}`)
-        console.log('\n👥 Sample users created:')
-        json.createdUsers.forEach((user) => {
-          console.log(`   - @${user.username} (${user.displayName})`)
-        })
+        console.log(`   - Users created: ${json.stats?.usersCreated || 0}`)
+        console.log(`   - Total users: ${json.stats?.totalUsers || 0}`)
+        console.log(`   - Posts created: ${json.stats?.postsCreated || 0}`)
+
+        if (json.createdUsers && json.createdUsers.length > 0) {
+          console.log('\n👥 Sample users created:')
+          json.createdUsers.forEach((user) => {
+            console.log(`   - @${user.username} (${user.displayName})`)
+          })
+        }
+
         console.log('\n✨ You can now visit http://localhost:3000/feed to see the posts!\n')
       } catch (error) {
-        console.error('❌ Error parsing response:', error)
+        console.error('❌ Error parsing response:', error.message)
+        console.error('   Response:', data)
       }
     })
   })

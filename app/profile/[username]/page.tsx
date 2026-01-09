@@ -361,7 +361,9 @@ export default function ProfilePage() {
                         />
                         <div className="post-card-overlay">
                           <div className="post-card-info">
-                            <span className="post-price">${post.price.toFixed(2)}</span>
+                            {post.price && post.price > 0 && (
+                              <span className="post-price">${typeof post.price === 'number' ? post.price.toFixed(2) : '0.00'}</span>
+                            )}
                             <span className="post-likes">❤️ {post.likes}</span>
                           </div>
                         </div>
