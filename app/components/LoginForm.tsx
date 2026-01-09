@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface FormData {
   email: string
@@ -14,6 +15,7 @@ interface FormErrors {
 }
 
 export default function LoginForm() {
+  const router = useRouter()
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -89,10 +91,9 @@ export default function LoginForm() {
       setSuccessMessage('Login successful! Redirecting...')
       setFormData({ email: '', password: '' })
 
-      // Simulate redirect after 1 second
+      // Redirect to home page after 1 second
       setTimeout(() => {
-        alert(`Welcome ${mockUser.username}! You have successfully logged in.`)
-        // In a real app, you would use router.push('/dashboard')
+        router.push('/home')
       }, 1000)
     } catch (error) {
       setErrors({

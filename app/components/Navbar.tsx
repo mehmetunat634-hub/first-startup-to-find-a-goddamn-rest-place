@@ -1,0 +1,82 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Home, Compass, Settings, LogOut, User } from 'lucide-react'
+
+export default function Navbar() {
+  const router = useRouter()
+  const [username, setUsername] = useState('')
+
+  // Get username from localStorage on mount
+  useEffect(() => {
+    const user = localStorage.getItem('user')
+    if (user) {
+      const userData = JSON.parse(user)
+      setUsername(userData.username)
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('user')
+    localStorage.removeItem('isLoggedIn')
+    router.push('/')
+  }
+
+  const handleSettings = () => {
+    router.push('/settings')
+  }
+
+  const handleProfileClick = () => {
+    if (username) {
+      router.push(`/profile/@${username}`)
+    }
+  }
+
+  return (
+    <nav className="navbar">
+      <div className="navbar-top">
+        <div className="navbar-logo">instagram</div>
+
+        <div className="navbar-links">
+          <a href="#" className="navbar-link">
+            <Home className="navbar-link-icon" size={24} />
+            <span className="navbar-link-text">Feed</span>
+          </a>
+          <a href="#" className="navbar-link">
+            <Compass className="navbar-link-icon" size={24} />
+            <span className="navbar-link-text">Explore</span>
+          </a>
+        </div>
+      </div>
+
+      <button className="navbar-profile" onClick={handleProfileClick}>
+        <div className="profile-avatar">
+          {username.charAt(0).toUpperCase()}
+        </div>
+        <div className="profile-info">
+          <div className="profile-greeting">Hello</div>
+          <div className="profile-username">{username}</div>
+        </div>
+      </button>
+
+      <div className="navbar-bottom">
+        <button
+          className="navbar-settings"
+          onClick={handleSettings}
+          title="Settings"
+        >
+          <Settings className="settings-icon" size={20} />
+          <span className="settings-text">Settings</span>
+        </button>
+        <button
+          className="navbar-logout"
+          onClick={handleLogout}
+          title="Logout"
+        >
+          <LogOut className="logout-icon" size={20} />
+        </button>
+      </div>
+    </nav>
+  )
+}
