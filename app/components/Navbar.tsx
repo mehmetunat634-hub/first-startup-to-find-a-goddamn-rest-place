@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Home, Compass, Settings, LogOut } from 'lucide-react'
+import { Home, Compass, Settings, LogOut, User } from 'lucide-react'
 
 export default function Navbar() {
   const router = useRouter()
   const [username, setUsername] = useState('')
 
   // Get username from localStorage on mount
-  useState(() => {
+  useEffect(() => {
     const user = localStorage.getItem('user')
     if (user) {
       const userData = JSON.parse(user)
@@ -41,6 +41,16 @@ export default function Navbar() {
             <Compass className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Explore</span>
           </a>
+        </div>
+      </div>
+
+      <div className="navbar-profile">
+        <div className="profile-avatar">
+          {username.charAt(0).toUpperCase()}
+        </div>
+        <div className="profile-info">
+          <div className="profile-greeting">Hello</div>
+          <div className="profile-username">{username}</div>
         </div>
       </div>
 

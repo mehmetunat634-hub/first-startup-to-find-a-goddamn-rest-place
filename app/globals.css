@@ -315,7 +315,6 @@ body {
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   position: fixed;
   left: 0;
   top: 0;
@@ -327,6 +326,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  flex-grow: 1;
 }
 
 .navbar-logo {
@@ -410,6 +410,55 @@ body {
 
 .settings-text {
   display: block;
+}
+
+.navbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-greeting {
+  font-size: 0.75rem;
+  color: #a0a0a0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-username {
+  font-size: 0.95rem;
+  color: #262626;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar-logout {
