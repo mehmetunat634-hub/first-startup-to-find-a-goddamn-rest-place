@@ -24,7 +24,7 @@ export default function Navbar() {
   }
 
   const handleSettings = () => {
-    alert('Settings page coming soon!')
+    router.push('/settings')
   }
 
   const handleProfileClick = () => {
