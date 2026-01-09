@@ -146,33 +146,65 @@ export default function ProfilePage() {
     }
     setIsLoggedIn(true)
 
-    // Simulate fetching profile data
-    const username = params.username as string
-    const usernameWithoutAt = username.replace('@', '')
+    // Fetch profile data from API
+    const fetchProfile = async () => {
+      try {
+        const username = params.username as string
+        const usernameWithoutAt = username.replace('@', '')
 
-    // Simulate API call delay
-    setTimeout(() => {
-      const mockProfile =
-        mockProfiles[usernameWithoutAt.toLowerCase()] ||
-        {
-          username: usernameWithoutAt,
-          displayName: usernameWithoutAt.charAt(0).toUpperCase() + usernameWithoutAt.slice(1),
-          firstName: usernameWithoutAt.charAt(0).toUpperCase() + usernameWithoutAt.slice(1),
-          lastName: 'User',
-          bio: 'Instagram user',
+        const response = await fetch(`/api/users/${usernameWithoutAt}`)
+
+        if (!response.ok) {
+          // Fall back to mock profile if user not found
+          const mockProfile =
+            mockProfiles[usernameWithoutAt.toLowerCase()] ||
+            {
+              username: usernameWithoutAt,
+              displayName: usernameWithoutAt.charAt(0).toUpperCase() + usernameWithoutAt.slice(1),
+              firstName: usernameWithoutAt.charAt(0).toUpperCase() + usernameWithoutAt.slice(1),
+              lastName: 'User',
+              bio: 'Instagram user',
+              location: 'Earth',
+              website: `https://${usernameWithoutAt}.com`,
+              joinDate: 'Unknown',
+              followers: Math.floor(Math.random() * 10000),
+              following: Math.floor(Math.random() * 1000),
+              posts: Math.floor(Math.random() * 500),
+              avatar: usernameWithoutAt.charAt(0).toUpperCase(),
+              coverImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }
+          setProfile(mockProfile)
+          setLoading(false)
+          return
+        }
+
+        const userData = await response.json()
+
+        // Enhance with additional fields
+        const enhancedProfile: UserProfile = {
+          ...userData,
           location: 'Earth',
-          website: `https://${usernameWithoutAt}.com`,
-          joinDate: 'Unknown',
+          website: `https://${userData.username}.com`,
+          joinDate: new Date(userData.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+          }),
           followers: Math.floor(Math.random() * 10000),
           following: Math.floor(Math.random() * 1000),
           posts: Math.floor(Math.random() * 500),
-          avatar: usernameWithoutAt.charAt(0).toUpperCase(),
+          avatar: userData.username.charAt(0).toUpperCase(),
           coverImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }
 
-      setProfile(mockProfile)
-      setLoading(false)
-    }, 500)
+        setProfile(enhancedProfile)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching profile:', error)
+        setLoading(false)
+      }
+    }
+
+    fetchProfile()
   }, [params.username, router])
 
   if (!isLoggedIn || loading) {

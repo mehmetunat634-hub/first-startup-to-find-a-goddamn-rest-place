@@ -94,6 +94,7 @@ export default function VideoCallPage() {
   const [isInCall, setIsInCall] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
   const [username, setUsername] = useState('')
+  const [availableUsers, setAvailableUsers] = useState<RandomUser[]>([])
 
   useEffect(() => {
     // Check if user is logged in
@@ -111,7 +112,35 @@ export default function VideoCallPage() {
       setUsername(parsed.username)
     }
 
-    setLoading(false)
+    // Fetch users from API
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users')
+        if (response.ok) {
+          const users = await response.json()
+          // Convert API users to RandomUser format
+          const randomUsers: RandomUser[] = users.map((user: any, index: number) => ({
+            id: String(index),
+            username: user.username,
+            displayName: user.displayName,
+            avatar: user.username.charAt(0).toUpperCase(),
+            status: 'online' as const,
+          }))
+          setAvailableUsers(randomUsers)
+        } else {
+          // Fall back to mock users if API fails
+          setAvailableUsers(mockUsers)
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error)
+        // Fall back to mock users on error
+        setAvailableUsers(mockUsers)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUsers()
   }, [router])
 
   // Handle call timer
@@ -126,12 +155,18 @@ export default function VideoCallPage() {
   }, [isInCall])
 
   const getRandomUser = () => {
-    const randomIndex = Math.floor(Math.random() * mockUsers.length)
-    const user = mockUsers[randomIndex]
+    if (availableUsers.length === 0) return null
+
+    const randomIndex = Math.floor(Math.random() * availableUsers.length)
+    const user = availableUsers[randomIndex]
 
     // Don't match with yourself
     if (user.username === username) {
-      return getRandomUser()
+      // Try to find another user
+      const otherUsers = availableUsers.filter(u => u.username !== username)
+      if (otherUsers.length === 0) return null
+      const randomOtherIndex = Math.floor(Math.random() * otherUsers.length)
+      return otherUsers[randomOtherIndex]
     }
 
     return user
@@ -139,6 +174,10 @@ export default function VideoCallPage() {
 
   const handleFindMatch = () => {
     const randomUser = getRandomUser()
+    if (!randomUser) {
+      alert('No users available for matching')
+      return
+    }
     setMatchedUser(randomUser)
     setIsInCall(true)
     setCallDuration(0)
@@ -146,6 +185,10 @@ export default function VideoCallPage() {
 
   const handleSkip = () => {
     const randomUser = getRandomUser()
+    if (!randomUser) {
+      alert('No users available for matching')
+      return
+    }
     setMatchedUser(randomUser)
     setCallDuration(0)
   }
