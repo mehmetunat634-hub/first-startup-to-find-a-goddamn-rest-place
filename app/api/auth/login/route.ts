@@ -31,19 +31,23 @@ export async function POST(request: NextRequest) {
 
     if (!username || !password) {
       return NextResponse.json(
-        { error: 'Username and password are required' },
+        { error: 'Username/email and password are required' },
         { status: 400 }
       )
     }
 
     const users = await getUsers()
+
+    // Try to find user by username first, then by email
     const user = users.find(
-      u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
+      u => (u.username.toLowerCase() === username.toLowerCase() ||
+             u.email.toLowerCase() === username.toLowerCase()) &&
+            u.password === password
     )
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid username or password' },
+        { error: 'Invalid username/email or password' },
         { status: 401 }
       )
     }

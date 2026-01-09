@@ -145,7 +145,7 @@ export default function LoginForm() {
       <div className="form-group">
         <label htmlFor="email">Email or username</label>
         <input
-          type="email"
+          type="text"
           id="email"
           name="email"
           placeholder="Phone number, username, or email"
