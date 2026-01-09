@@ -27,6 +27,12 @@ export default function Navbar() {
     alert('Settings page coming soon!')
   }
 
+  const handleProfileClick = () => {
+    if (username) {
+      router.push(`/profile/@${username}`)
+    }
+  }
+
   return (
     <nav className="navbar">
       <div className="navbar-top">
@@ -44,7 +50,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className="navbar-profile">
+      <button className="navbar-profile" onClick={handleProfileClick}>
         <div className="profile-avatar">
           {username.charAt(0).toUpperCase()}
         </div>
@@ -52,7 +58,7 @@ export default function Navbar() {
           <div className="profile-greeting">Hello</div>
           <div className="profile-username">{username}</div>
         </div>
-      </div>
+      </button>
 
       <div className="navbar-bottom">
         <button
