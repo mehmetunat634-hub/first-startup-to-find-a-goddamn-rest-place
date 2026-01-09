@@ -1,28 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
-import path from 'path'
-
-interface User {
-  username: string
-  email: string
-  password: string
-  displayName: string
-  firstName: string
-  lastName: string
-  bio: string
-  createdAt: string
-}
-
-const USERS_FILE = path.join(process.cwd(), '.data', 'users.json')
-
-async function getUsers(): Promise<User[]> {
-  try {
-    const data = await fs.readFile(USERS_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    return []
-  }
-}
+import { getUserForLogin, removeUserPassword } from '@/app/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,25 +13,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const users = await getUsers()
+    const user = getUserForLogin(username)
 
-    // Try to find user by username first, then by email
-    const user = users.find(
-      u => (u.username.toLowerCase() === username.toLowerCase() ||
-             u.email.toLowerCase() === username.toLowerCase()) &&
-            u.password === password
-    )
-
-    if (!user) {
+    if (!user || user.password !== password) {
       return NextResponse.json(
         { error: 'Invalid username/email or password' },
         { status: 401 }
       )
     }
 
-    // Return user data without password
-    const { password: _, ...userWithoutPassword } = user
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(removeUserPassword(user))
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(

@@ -1,32 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
-import path from 'path'
-
-interface User {
-  username: string
-  email: string
-  password: string
-  displayName: string
-  firstName: string
-  lastName: string
-  bio: string
-  createdAt: string
-}
-
-const USERS_FILE = path.join(process.cwd(), '.data', 'users.json')
-
-async function getUsers(): Promise<User[]> {
-  try {
-    const data = await fs.readFile(USERS_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    return []
-  }
-}
-
-async function saveUsers(users: User[]) {
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2))
-}
+import { getUserByUsername, updateUser, removeUserPassword } from '@/app/lib/db'
 
 export async function GET(
   request: NextRequest,
@@ -34,8 +7,7 @@ export async function GET(
 ) {
   try {
     const username = params.username.toLowerCase()
-    const users = await getUsers()
-    const user = users.find(u => u.username === username)
+    const user = getUserByUsername(username)
 
     if (!user) {
       return NextResponse.json(
@@ -44,9 +16,7 @@ export async function GET(
       )
     }
 
-    // Return user data without password
-    const { password: _, ...userWithoutPassword } = user
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(removeUserPassword(user))
   } catch (error) {
     console.error('Error fetching user:', error)
     return NextResponse.json(
@@ -65,26 +35,21 @@ export async function PUT(
     const body = await request.json()
     const { displayName, firstName, lastName, bio } = body
 
-    const users = await getUsers()
-    const userIndex = users.findIndex(u => u.username === username)
+    const user = updateUser(username, {
+      displayName,
+      firstName,
+      lastName,
+      bio
+    })
 
-    if (userIndex === -1) {
+    if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    // Update user profile
-    if (displayName) users[userIndex].displayName = displayName
-    if (firstName) users[userIndex].firstName = firstName
-    if (lastName) users[userIndex].lastName = lastName
-    if (bio !== undefined) users[userIndex].bio = bio
-
-    await saveUsers(users)
-
-    const { password: _, ...userWithoutPassword } = users[userIndex]
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json(removeUserPassword(user))
   } catch (error) {
     console.error('Error updating user:', error)
     return NextResponse.json(

@@ -1,44 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { promises as fs } from 'fs'
-import path from 'path'
-
-interface User {
-  username: string
-  email: string
-  password: string
-  displayName: string
-  firstName: string
-  lastName: string
-  bio: string
-  createdAt: string
-}
-
-const DATA_DIR = path.join(process.cwd(), '.data')
-const USERS_FILE = path.join(DATA_DIR, 'users.json')
-
-async function ensureDataDir() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true })
-  } catch (error) {
-    // Directory might already exist
-  }
-}
-
-async function getUsers(): Promise<User[]> {
-  try {
-    await ensureDataDir()
-    const data = await fs.readFile(USERS_FILE, 'utf-8')
-    return JSON.parse(data)
-  } catch (error) {
-    // File doesn't exist yet
-    return []
-  }
-}
-
-async function saveUsers(users: User[]) {
-  await ensureDataDir()
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2))
-}
+import { createUser, getUserByUsername, getUserByEmail, removeUserPassword } from '@/app/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,17 +28,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const users = await getUsers()
-
     // Check if user already exists
-    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+    if (getUserByUsername(username)) {
       return NextResponse.json(
         { error: 'Username already exists' },
         { status: 400 }
       )
     }
 
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+    if (getUserByEmail(email)) {
       return NextResponse.json(
         { error: 'Email already exists' },
         { status: 400 }
@@ -85,23 +44,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new user
-    const newUser: User = {
+    const newUser = createUser({
       username: username.toLowerCase(),
       email: email.toLowerCase(),
-      password, // In production, hash this!
+      password,
       displayName,
       firstName: firstName || displayName,
       lastName: lastName || 'User',
       bio: bio || 'Instagram user',
-      createdAt: new Date().toISOString(),
+    })
+
+    if (!newUser) {
+      return NextResponse.json(
+        { error: 'Failed to create user' },
+        { status: 500 }
+      )
     }
 
-    users.push(newUser)
-    await saveUsers(users)
-
-    // Return user data without password
-    const { password: _, ...userWithoutPassword } = newUser
-    return NextResponse.json(userWithoutPassword, { status: 201 })
+    return NextResponse.json(removeUserPassword(newUser), { status: 201 })
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json(
