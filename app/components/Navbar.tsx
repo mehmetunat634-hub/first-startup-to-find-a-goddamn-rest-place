@@ -47,6 +47,10 @@ export default function Navbar() {
             <Compass className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Explore</span>
           </a>
+          <a href="#" className="navbar-link">
+            <Newspaper className="navbar-link-icon" size={24} />
+            <span className="navbar-link-text">Feed</span>
+          </a>
         </div>
       </div>
 
@@ -64,10 +68,6 @@ export default function Navbar() {
       </button>
 
       <div className="navbar-bottom">
-        <a href="#" className="navbar-link">
-          <Newspaper className="navbar-link-icon" size={24} />
-          <span className="navbar-link-text">Feed</span>
-        </a>
         <button
           className="navbar-settings"
           onClick={handleSettings}
