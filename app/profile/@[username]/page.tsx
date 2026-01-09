@@ -8,6 +8,8 @@ import { ArrowLeft, MapPin, Link as LinkIcon, Calendar } from 'lucide-react'
 interface UserProfile {
   username: string
   displayName: string
+  firstName: string
+  lastName: string
   bio: string
   location: string
   website: string
@@ -24,6 +26,8 @@ const mockProfiles: { [key: string]: UserProfile } = {
   john: {
     username: 'john',
     displayName: 'John Doe',
+    firstName: 'John',
+    lastName: 'Doe',
     bio: 'Photography enthusiast and coffee lover ☕📸',
     location: 'New York, USA',
     website: 'https://johndoe.com',
@@ -37,6 +41,8 @@ const mockProfiles: { [key: string]: UserProfile } = {
   jane: {
     username: 'jane',
     displayName: 'Jane Smith',
+    firstName: 'Jane',
+    lastName: 'Smith',
     bio: 'Designer | Traveler | Coffee addict',
     location: 'Los Angeles, CA',
     website: 'https://janesmith.design',
@@ -50,6 +56,8 @@ const mockProfiles: { [key: string]: UserProfile } = {
   alex: {
     username: 'alex',
     displayName: 'Alex Johnson',
+    firstName: 'Alex',
+    lastName: 'Johnson',
     bio: 'Tech & lifestyle content creator',
     location: 'San Francisco, CA',
     website: 'https://alexjohnson.tech',
@@ -89,6 +97,8 @@ export default function ProfilePage() {
         {
           username: usernameWithoutAt,
           displayName: usernameWithoutAt.charAt(0).toUpperCase() + usernameWithoutAt.slice(1),
+          firstName: usernameWithoutAt.charAt(0).toUpperCase() + usernameWithoutAt.slice(1),
+          lastName: 'User',
           bio: 'Instagram user',
           location: 'Earth',
           website: `https://${usernameWithoutAt}.com`,
@@ -174,6 +184,17 @@ export default function ProfilePage() {
 
             {/* User Details */}
             <div className="profile-details">
+              <div className="profile-name-row">
+                <div className="profile-name-item">
+                  <span className="profile-label">First Name</span>
+                  <span className="profile-name-value">{profile.firstName}</span>
+                </div>
+                <div className="profile-name-item">
+                  <span className="profile-label">Last Name</span>
+                  <span className="profile-name-value">{profile.lastName}</span>
+                </div>
+              </div>
+
               <h1 className="profile-display-name">{profile.displayName}</h1>
               <p className="profile-username">@{profile.username}</p>
 
@@ -205,19 +226,28 @@ export default function ProfilePage() {
 
             {/* Posts Section */}
             <div className="profile-posts">
-              <h3 className="posts-title">Posts</h3>
+              <h3 className="posts-title">Last Seen Posts</h3>
               <div className="posts-grid">
                 {[1, 2, 3, 4, 5, 6].map((post) => (
-                  <div key={post} className="post-thumbnail">
-                    <div
-                      style={{
-                        background: `linear-gradient(135deg, hsl(${
-                          post * 60
-                        }, 70%, 60%) 0%, hsl(${post * 60 + 30}, 70%, 50%) 100%)`,
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    ></div>
+                  <div key={post} className="post-card">
+                    <div className="post-card-content">
+                      <div
+                        style={{
+                          background: `linear-gradient(135deg, hsl(${
+                            post * 60
+                          }, 70%, 60%) 0%, hsl(${post * 60 + 30}, 70%, 50%) 100%)`,
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <span style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold' }}>
+                          Post {post}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

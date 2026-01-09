@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Home, Compass, Settings, LogOut, User } from 'lucide-react'
+import { Newspaper, Compass, Settings, LogOut, User } from 'lucide-react'
 
 export default function Navbar() {
   const router = useRouter()
@@ -44,10 +44,6 @@ export default function Navbar() {
 
         <div className="navbar-links">
           <a href="#" className="navbar-link">
-            <Home className="navbar-link-icon" size={24} />
-            <span className="navbar-link-text">Feed</span>
-          </a>
-          <a href="#" className="navbar-link">
             <Compass className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Explore</span>
           </a>
@@ -68,6 +64,10 @@ export default function Navbar() {
       </button>
 
       <div className="navbar-bottom">
+        <a href="#" className="navbar-link">
+          <Newspaper className="navbar-link-icon" size={24} />
+          <span className="navbar-link-text">Feed</span>
+        </a>
         <button
           className="navbar-settings"
           onClick={handleSettings}
