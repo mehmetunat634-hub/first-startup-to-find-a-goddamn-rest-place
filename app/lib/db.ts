@@ -236,6 +236,17 @@ export function findWaitingSession(excludeUserId: string): VideoSession | null {
   return stmt.get(excludeUserId) as VideoSession | null
 }
 
+export function findSessionWithTargetUser(fromUserId: string, toUserId: string): VideoSession | null {
+  const stmt = db.prepare(`
+    SELECT * FROM video_sessions
+    WHERE ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?))
+    AND status IN ('waiting', 'active')
+    ORDER BY createdAt DESC
+    LIMIT 1
+  `)
+  return stmt.get(fromUserId, toUserId, toUserId, fromUserId) as VideoSession | null
+}
+
 export function matchVideoSession(sessionId: string, userId: string): VideoSession | null {
   const stmt = db.prepare(`
     UPDATE video_sessions
