@@ -7,6 +7,7 @@ import { Home, Compass, Settings, LogOut, User } from 'lucide-react'
 export default function Navbar() {
   const router = useRouter()
   const [username, setUsername] = useState('')
+  const [isPro, setIsPro] = useState(false)
 
   // Get username from localStorage on mount
   useEffect(() => {
@@ -14,6 +15,9 @@ export default function Navbar() {
     if (user) {
       const userData = JSON.parse(user)
       setUsername(userData.username)
+      // Mock pro status - check if username exists in pro list or random
+      const proUsers = ['mehmetunat634', 'john', 'jane']
+      setIsPro(proUsers.includes(userData.username.toLowerCase()))
     }
   }, [])
 
@@ -56,7 +60,10 @@ export default function Navbar() {
         </div>
         <div className="profile-info">
           <div className="profile-greeting">Hello</div>
-          <div className="profile-username">{username}</div>
+          <div className="profile-username-row">
+            <span className="profile-username">{username}</span>
+            {isPro && <span className="pro-badge">Pro</span>}
+          </div>
         </div>
       </button>
 
