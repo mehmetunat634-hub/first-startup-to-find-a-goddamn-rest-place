@@ -20,7 +20,31 @@ db.exec(`
     bio TEXT DEFAULT '',
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
+  );
+
+  CREATE TABLE IF NOT EXISTS video_sessions (
+    id TEXT PRIMARY KEY,
+    user1_id TEXT NOT NULL,
+    user2_id TEXT,
+    status TEXT DEFAULT 'waiting',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user1_id) REFERENCES users(id),
+    FOREIGN KEY (user2_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS video_signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    from_user_id TEXT NOT NULL,
+    to_user_id TEXT NOT NULL,
+    signal_type TEXT,
+    signal_data TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES video_sessions(id),
+    FOREIGN KEY (from_user_id) REFERENCES users(id),
+    FOREIGN KEY (to_user_id) REFERENCES users(id)
+  );
 `)
 
 export interface User {
@@ -150,4 +174,99 @@ export function getUserForLogin(usernameOrEmail: string): User | null {
 export function removeUserPassword(user: User): UserPublic {
   const { password: _, ...userWithoutPassword } = user
   return userWithoutPassword as UserPublic
+}
+
+// Video call session functions
+export interface VideoSession {
+  id: string
+  user1_id: string
+  user2_id: string | null
+  status: 'waiting' | 'active' | 'ended'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VideoSignal {
+  id: number
+  session_id: string
+  from_user_id: string
+  to_user_id: string
+  signal_type: string
+  signal_data: string
+  createdAt: string
+}
+
+export function createVideoSession(userId: string): VideoSession {
+  const sessionId = Math.random().toString(36).substr(2, 12)
+  const stmt = db.prepare(`
+    INSERT INTO video_sessions (id, user1_id, status)
+    VALUES (?, ?, 'waiting')
+  `)
+  stmt.run(sessionId, userId)
+  return getVideoSessionById(sessionId)!
+}
+
+export function getVideoSessionById(sessionId: string): VideoSession | null {
+  const stmt = db.prepare('SELECT * FROM video_sessions WHERE id = ?')
+  return stmt.get(sessionId) as VideoSession | null
+}
+
+export function findWaitingSession(excludeUserId: string): VideoSession | null {
+  const stmt = db.prepare(`
+    SELECT * FROM video_sessions
+    WHERE status = 'waiting' AND user1_id != ?
+    ORDER BY createdAt ASC
+    LIMIT 1
+  `)
+  return stmt.get(excludeUserId) as VideoSession | null
+}
+
+export function matchVideoSession(sessionId: string, userId: string): VideoSession | null {
+  const stmt = db.prepare(`
+    UPDATE video_sessions
+    SET user2_id = ?, status = 'active', updatedAt = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `)
+  stmt.run(userId, sessionId)
+  return getVideoSessionById(sessionId)
+}
+
+export function endVideoSession(sessionId: string): void {
+  const stmt = db.prepare(`
+    UPDATE video_sessions
+    SET status = 'ended', updatedAt = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `)
+  stmt.run(sessionId)
+}
+
+export function addVideoSignal(
+  sessionId: string,
+  fromUserId: string,
+  toUserId: string,
+  signalType: string,
+  signalData: string
+): VideoSignal {
+  const stmt = db.prepare(`
+    INSERT INTO video_signals (session_id, from_user_id, to_user_id, signal_type, signal_data)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+  const result = stmt.run(sessionId, fromUserId, toUserId, signalType, signalData)
+
+  const getStmt = db.prepare('SELECT * FROM video_signals WHERE id = ?')
+  return getStmt.get(result.lastInsertRowid) as VideoSignal
+}
+
+export function getVideoSignalsForUser(sessionId: string, userId: string): VideoSignal[] {
+  const stmt = db.prepare(`
+    SELECT * FROM video_signals
+    WHERE session_id = ? AND to_user_id = ?
+    ORDER BY createdAt ASC
+  `)
+  return stmt.all(sessionId, userId) as VideoSignal[]
+}
+
+export function deleteVideoSignals(sessionId: string): void {
+  const stmt = db.prepare('DELETE FROM video_signals WHERE session_id = ?')
+  stmt.run(sessionId)
 }

@@ -1,202 +1,297 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import SimplePeer, { Instance as PeerInstance } from 'simple-peer'
 import Navbar from '../components/Navbar'
-import { Phone, PhoneOff, SkipForward, UserPlus, Video } from 'lucide-react'
+import { Phone, PhoneOff, SkipForward, UserPlus, Video, VideoOff, Loader } from 'lucide-react'
 
-interface RandomUser {
+interface RemoteUser {
   id: string
   username: string
   displayName: string
-  avatar: string
-  status: 'online' | 'offline'
 }
-
-const mockUsers: RandomUser[] = [
-  {
-    id: '1',
-    username: 'john',
-    displayName: 'John Doe',
-    avatar: 'J',
-    status: 'online',
-  },
-  {
-    id: '2',
-    username: 'jane',
-    displayName: 'Jane Smith',
-    avatar: 'J',
-    status: 'online',
-  },
-  {
-    id: '3',
-    username: 'alex',
-    displayName: 'Alex Johnson',
-    avatar: 'A',
-    status: 'online',
-  },
-  {
-    id: '4',
-    username: 'sarah',
-    displayName: 'Sarah Wilson',
-    avatar: 'S',
-    status: 'online',
-  },
-  {
-    id: '5',
-    username: 'mike',
-    displayName: 'Mike Chen',
-    avatar: 'M',
-    status: 'online',
-  },
-  {
-    id: '6',
-    username: 'emma',
-    displayName: 'Emma Davis',
-    avatar: 'E',
-    status: 'online',
-  },
-  {
-    id: '7',
-    username: 'mehmetunat634',
-    displayName: 'Mehmet Ünal',
-    avatar: 'M',
-    status: 'online',
-  },
-  {
-    id: '8',
-    username: 'david',
-    displayName: 'David Martinez',
-    avatar: 'D',
-    status: 'online',
-  },
-  {
-    id: '9',
-    username: 'lisa',
-    displayName: 'Lisa Anderson',
-    avatar: 'L',
-    status: 'online',
-  },
-  {
-    id: '10',
-    username: 'kevin',
-    displayName: 'Kevin Brown',
-    avatar: 'K',
-    status: 'online',
-  },
-]
 
 export default function VideoCallPage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [matchedUser, setMatchedUser] = useState<RandomUser | null>(null)
+  const [userId, setUserId] = useState('')
+  const [username, setUsername] = useState('')
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [matchedUser, setMatchedUser] = useState<RemoteUser | null>(null)
   const [isInCall, setIsInCall] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
-  const [username, setUsername] = useState('')
-  const [availableUsers, setAvailableUsers] = useState<RandomUser[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [videoEnabled, setVideoEnabled] = useState(true)
 
+  // Video and WebRTC refs
+  const localVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
+  const peerRef = useRef<PeerInstance | null>(null)
+  const localStreamRef = useRef<MediaStream | null>(null)
+  const matchPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const signalPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Initialize and get user info
   useEffect(() => {
-    // Check if user is logged in
-    const loggedIn = localStorage.getItem('isLoggedIn')
-    if (!loggedIn) {
-      router.push('/')
-      return
-    }
-    setIsLoggedIn(true)
+    const checkAuth = async () => {
+      const loggedIn = localStorage.getItem('isLoggedIn')
+      if (!loggedIn) {
+        router.push('/')
+        return
+      }
 
-    // Get username from localStorage
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      const parsed = JSON.parse(userData)
-      setUsername(parsed.username)
-    }
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        const parsed = JSON.parse(userData)
+        setUserId(parsed.id)
+        setUsername(parsed.username)
+      }
 
-    // Fetch users from API
-    const fetchUsers = async () => {
+      // Request camera access immediately
       try {
-        const response = await fetch('/api/users')
-        if (response.ok) {
-          const users = await response.json()
-          // Convert API users to RandomUser format
-          const randomUsers: RandomUser[] = users.map((user: any, index: number) => ({
-            id: String(index),
-            username: user.username,
-            displayName: user.displayName,
-            avatar: user.username.charAt(0).toUpperCase(),
-            status: 'online' as const,
-          }))
-          setAvailableUsers(randomUsers)
-        } else {
-          // Fall back to mock users if API fails
-          setAvailableUsers(mockUsers)
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        })
+        localStreamRef.current = stream
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream
         }
       } catch (error) {
-        console.error('Error fetching users:', error)
-        // Fall back to mock users on error
-        setAvailableUsers(mockUsers)
-      } finally {
-        setLoading(false)
+        console.error('Error accessing camera:', error)
+        alert('Unable to access camera. Please check permissions.')
       }
+
+      setIsLoggedIn(true)
+      setLoading(false)
     }
 
-    fetchUsers()
+    checkAuth()
+
+    // Cleanup on unmount
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop())
+      }
+      if (peerRef.current) {
+        peerRef.current.destroy()
+      }
+      if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
+      if (signalPollIntervalRef.current) clearInterval(signalPollIntervalRef.current)
+    }
   }, [router])
 
-  // Handle call timer
+  // Handle call duration timer
   useEffect(() => {
     if (!isInCall) return
 
     const interval = setInterval(() => {
-      setCallDuration((prev) => prev + 1)
+      setCallDuration(prev => prev + 1)
     }, 1000)
 
     return () => clearInterval(interval)
   }, [isInCall])
 
-  const getRandomUser = () => {
-    if (availableUsers.length === 0) return null
+  // Start WebRTC connection
+  const startWebRTCConnection = useCallback((remoteUserId: string) => {
+    if (!localStreamRef.current || !sessionId) return
 
-    const randomIndex = Math.floor(Math.random() * availableUsers.length)
-    const user = availableUsers[randomIndex]
+    // Create peer connection
+    const peer = new SimplePeer({
+      initiator: userId < remoteUserId, // Deterministic initiator based on user IDs
+      trickle: true,
+      streams: [localStreamRef.current],
+      config: {
+        iceServers: [
+          { urls: ['stun:stun.l.google.com:19302'] },
+          { urls: ['stun:stun1.l.google.com:19302'] },
+        ],
+      },
+    })
 
-    // Don't match with yourself
-    if (user.username === username) {
-      // Try to find another user
-      const otherUsers = availableUsers.filter(u => u.username !== username)
-      if (otherUsers.length === 0) return null
-      const randomOtherIndex = Math.floor(Math.random() * otherUsers.length)
-      return otherUsers[randomOtherIndex]
+    peer.on('stream', (stream: MediaStream) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream
+      }
+    })
+
+    peer.on('signal', (data: any) => {
+      // Send signal data to remote user
+      fetch('/api/video-calls/signal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          fromUserId: userId,
+          toUserId: remoteUserId,
+          signalType: 'webrtc',
+          signalData: JSON.stringify(data),
+        }),
+      }).catch(console.error)
+    })
+
+    peer.on('error', (error: Error) => {
+      console.error('WebRTC error:', error)
+    })
+
+    peerRef.current = peer
+
+    // Poll for incoming signals from remote user
+    signalPollIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/video-calls/signal?sessionId=${sessionId}&userId=${userId}`
+        )
+        const data = await response.json()
+
+        if (data.signals && data.signals.length > 0) {
+          for (const signal of data.signals) {
+            try {
+              const signalData = JSON.parse(signal.signal_data)
+              peer.signal(signalData)
+            } catch (error) {
+              console.error('Error processing signal:', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching signals:', error)
+      }
+    }, 500) // Poll every 500ms
+  }, [sessionId, userId])
+
+  // Poll for match
+  useEffect(() => {
+    if (!sessionId || isInCall) return
+
+    matchPollIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch('/api/video-calls/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, userId }),
+        })
+
+        const data = await response.json()
+        if (data.matched && data.otherUser) {
+          setMatchedUser({
+            id: data.otherUser.id,
+            username: data.otherUser.username,
+            displayName: data.otherUser.displayName,
+          })
+          setIsInCall(true)
+          setIsSearching(false)
+          if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
+          startWebRTCConnection(data.otherUser.id)
+        }
+      } catch (error) {
+        console.error('Error checking match:', error)
+      }
+    }, 1000) // Poll every second
+
+    return () => {
+      if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
     }
+  }, [sessionId, isInCall, userId, startWebRTCConnection])
 
-    return user
-  }
-
-  const handleFindMatch = () => {
-    const randomUser = getRandomUser()
-    if (!randomUser) {
-      alert('No users available for matching')
+  const handleFindMatch = async () => {
+    if (!userId) {
+      alert('User not authenticated')
       return
     }
-    setMatchedUser(randomUser)
-    setIsInCall(true)
-    setCallDuration(0)
-  }
 
-  const handleSkip = () => {
-    const randomUser = getRandomUser()
-    if (!randomUser) {
-      alert('No users available for matching')
-      return
+    setIsSearching(true)
+
+    try {
+      const response = await fetch('/api/video-calls/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+
+      const data = await response.json()
+      if (data.session) {
+        setSessionId(data.session.id)
+      }
+    } catch (error) {
+      console.error('Error creating session:', error)
+      alert('Failed to start video call session')
+      setIsSearching(false)
     }
-    setMatchedUser(randomUser)
-    setCallDuration(0)
   }
 
-  const handleEndCall = () => {
+  const handleSkip = async () => {
+    if (!sessionId) return
+
+    // End current session
+    try {
+      await fetch('/api/video-calls/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+    } catch (error) {
+      console.error('Error ending session:', error)
+    }
+
+    // Reset state and find new match
     setMatchedUser(null)
     setIsInCall(false)
     setCallDuration(0)
+    if (peerRef.current) {
+      peerRef.current.destroy()
+      peerRef.current = null
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null
+    }
+
+    // Start new session
+    handleFindMatch()
+  }
+
+  const handleEndCall = async () => {
+    if (!sessionId) return
+
+    try {
+      await fetch('/api/video-calls/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+    } catch (error) {
+      console.error('Error ending session:', error)
+    }
+
+    // Cleanup
+    setMatchedUser(null)
+    setIsInCall(false)
+    setSessionId(null)
+    setCallDuration(0)
+    setIsSearching(false)
+
+    if (peerRef.current) {
+      peerRef.current.destroy()
+      peerRef.current = null
+    }
+
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null
+    }
+
+    if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
+    if (signalPollIntervalRef.current) clearInterval(signalPollIntervalRef.current)
+  }
+
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled
+      })
+      setVideoEnabled(!videoEnabled)
+    }
   }
 
   const formatDuration = (seconds: number) => {
@@ -221,57 +316,98 @@ export default function VideoCallPage() {
       <Navbar />
       <main className="home-main">
         <div className="video-call-container">
-          {!matchedUser ? (
+          {!isInCall ? (
             <div className="video-call-welcome">
               <div className="video-call-icon">
                 <Video size={64} />
               </div>
               <h1 className="video-call-title">Random Video Call</h1>
               <p className="video-call-subtitle">
-                Connect with random users from around the world
+                Connect with random users with live video
               </p>
-              <button className="video-call-button" onClick={handleFindMatch}>
-                <UserPlus size={20} />
-                Find Match
+
+              {/* Local camera preview */}
+              {localStreamRef.current && (
+                <div className="local-preview-welcome">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ width: '100%', borderRadius: '12px' }}
+                  />
+                </div>
+              )}
+
+              <button
+                className="video-call-button"
+                onClick={handleFindMatch}
+                disabled={isSearching}
+              >
+                {isSearching ? (
+                  <>
+                    <Loader size={20} />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={20} />
+                    Find Match
+                  </>
+                )}
               </button>
               <div className="video-call-info">
                 <p>✓ Free for everyone</p>
-                <p>✓ Anonymous matching</p>
+                <p>✓ Live video connection</p>
                 <p>✓ Skip anytime</p>
               </div>
             </div>
           ) : (
             <div className="video-call-active">
-              {/* Remote User */}
+              {/* Remote User Video */}
               <div className="video-call-remote">
-                <div className="remote-video-container">
-                  <div className="remote-avatar">
-                    {matchedUser.avatar}
-                  </div>
-                  <div className="remote-info">
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                {matchedUser && (
+                  <div className="remote-info-overlay">
                     <h2>{matchedUser.displayName}</h2>
                     <div className="status-indicator">
                       <span className="status-dot"></span>
-                      {matchedUser.status}
+                      Connected
                     </div>
+                    {isInCall && (
+                      <div className="call-duration">
+                        {formatDuration(callDuration)}
+                      </div>
+                    )}
                   </div>
-                  {isInCall && (
-                    <div className="call-duration">
-                      {formatDuration(callDuration)}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
-              {/* Local User */}
-              <div className="video-call-local">
-                <div className="local-video-container">
-                  <div className="local-avatar">You</div>
-                </div>
+              {/* Local User Video (small picture-in-picture) */}
+              <div className="video-call-local-pip">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                />
               </div>
 
               {/* Call Controls */}
               <div className="video-call-controls">
+                <button
+                  className="control-button toggle"
+                  onClick={toggleVideo}
+                  title={videoEnabled ? 'Disable Video' : 'Enable Video'}
+                >
+                  {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+                </button>
                 <button
                   className="control-button decline"
                   onClick={handleEndCall}
@@ -282,7 +418,7 @@ export default function VideoCallPage() {
                 <button
                   className="control-button skip"
                   onClick={handleSkip}
-                  title="Skip"
+                  title="Skip to Next"
                 >
                   <SkipForward size={24} />
                 </button>
