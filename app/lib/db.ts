@@ -50,7 +50,10 @@ db.exec(`
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
     caption TEXT DEFAULT '',
-    imageUrl TEXT NOT NULL,
+    videoUrl TEXT NOT NULL,
+    thumbnailUrl TEXT,
+    price REAL DEFAULT 0,
+    taggedUsers TEXT DEFAULT '[]',
     likes INTEGER DEFAULT 0,
     comments INTEGER DEFAULT 0,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -288,7 +291,10 @@ export interface Post {
   id: string
   userId: string
   caption: string
-  imageUrl: string
+  videoUrl: string
+  thumbnailUrl: string | null
+  price: number
+  taggedUsers: string
   likes: number
   comments: number
   createdAt: string
@@ -299,13 +305,20 @@ export interface PostWithUser extends Post {
   user?: UserPublic
 }
 
-export function createPost(userId: string, caption: string, imageUrl: string): Post {
+export function createPost(
+  userId: string,
+  caption: string,
+  videoUrl: string,
+  thumbnailUrl?: string,
+  price: number = 0,
+  taggedUsers: string = '[]'
+): Post {
   const postId = Math.random().toString(36).substr(2, 12)
   const stmt = db.prepare(`
-    INSERT INTO posts (id, userId, caption, imageUrl)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO posts (id, userId, caption, videoUrl, thumbnailUrl, price, taggedUsers)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `)
-  stmt.run(postId, userId, caption, imageUrl)
+  stmt.run(postId, userId, caption, videoUrl, thumbnailUrl || null, price, taggedUsers)
   return getPostById(postId)!
 }
 

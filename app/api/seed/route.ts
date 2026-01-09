@@ -61,52 +61,64 @@ const sampleUsers = [
 
 const samplePosts = [
   {
-    caption: 'Beautiful sunset by the beach! 🌅',
-    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=600&fit=crop',
+    caption: 'Beautiful sunset cinematic video 🌅 Stunning colors',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/BigBuckBunny.mp4',
+    thumbnailUrl: 'https://peach.blender.org/wp-content/uploads/image-1-1024x574.png?x11217',
+    price: 9.99,
   },
   {
-    caption: 'Morning coffee and good vibes ☕✨',
-    imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=600&fit=crop',
+    caption: 'Adventure travel vlog - mountain hiking 🏔️',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/ElephantsDream.mp4',
+    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Elephants_Dream_%282006%29.svg/1200px-Elephants_Dream_%282006%29.svg.png',
+    price: 14.99,
   },
   {
-    caption: 'Adventure awaits! 🏔️',
-    imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=600&fit=crop',
+    caption: 'City exploration vlog 🌆 Urban photography',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/ForBiggerBlazes.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=600&h=600&fit=crop',
+    price: 7.99,
   },
   {
-    caption: 'Exploring the city 🌆',
-    imageUrl: 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=600&h=600&fit=crop',
+    caption: 'Nature documentary - wildlife 🌿',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/ForBiggerEscapes.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=600&fit=crop',
+    price: 12.99,
   },
   {
-    caption: 'Nature is healing 🌿',
-    imageUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600&h=600&fit=crop',
+    caption: 'Lifestyle vlog - living best life 💫',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/ForBiggerFun.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop',
+    price: 5.99,
   },
   {
-    caption: 'Living my best life! 💫',
-    imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop',
+    caption: 'Travel video - destinations 👥',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/ForBiggerJoyrides.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=600&h=600&fit=crop',
+    price: 11.99,
   },
   {
-    caption: 'The best view is together 👥',
-    imageUrl: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=600&h=600&fit=crop',
+    caption: 'Sunset cinematic footage 🌟',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/Sintel.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1514306688772-bab81ba36269?w=600&h=600&fit=crop',
+    price: 8.99,
   },
   {
-    caption: 'Chasing dreams and sunsets 🌟',
-    imageUrl: 'https://images.unsplash.com/photo-1514306688772-bab81ba36269?w=600&h=600&fit=crop',
+    caption: 'Friend group adventure 📸',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/SubaruOutbackOnStreetAndDirt.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop',
+    price: 6.99,
   },
   {
-    caption: 'Good times + crazy friends = amazing memories 📸',
-    imageUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop',
+    caption: 'Motivational video - sunshine story ☀️',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/VolkswagenGTIReview.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&h=600&fit=crop',
+    price: 4.99,
   },
   {
-    caption: 'Create your own sunshine 🌞',
-    imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&h=600&fit=crop',
-  },
-  {
-    caption: 'Weekend vibes ✨',
-    imageUrl: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&h=600&fit=crop',
-  },
-  {
-    caption: 'Sunset never gets old 🌅',
-    imageUrl: 'https://images.unsplash.com/photo-1495104466306-5d01b126b358?w=600&h=600&fit=crop',
+    caption: 'Vlog - weekend adventures ✨',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-library/sample/WeatherKids.mp4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&h=600&fit=crop',
+    price: 3.99,
   },
 ]
 
@@ -145,7 +157,10 @@ export async function POST() {
       const post = createPost(
         user.id,
         samplePosts[i].caption,
-        samplePosts[i].imageUrl
+        samplePosts[i].videoUrl,
+        samplePosts[i].thumbnailUrl,
+        samplePosts[i].price,
+        '[]'
       )
       createdPosts.push(post)
     }

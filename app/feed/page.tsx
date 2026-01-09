@@ -19,7 +19,10 @@ interface FeedPost {
   id: string
   userId: string
   caption: string
-  imageUrl: string
+  videoUrl: string
+  thumbnailUrl: string | null
+  price: number
+  taggedUsers: string
   likes: number
   comments: number
   createdAt: string
@@ -101,6 +104,14 @@ export default function FeedPage() {
     return date.toLocaleDateString()
   }
 
+  const parseTaggedUsers = (taggedUsersJson: string) => {
+    try {
+      return JSON.parse(taggedUsersJson) as string[]
+    } catch {
+      return []
+    }
+  }
+
   if (!isLoggedIn || loading) {
     return (
       <div className="home-container">
@@ -145,13 +156,26 @@ export default function FeedPage() {
                     </div>
                   </div>
 
-                  {/* Post Image */}
-                  <div className="post-image-container">
-                    <img
-                      src={post.imageUrl}
-                      alt={post.caption}
-                      className="post-image"
+                  {/* Post Video */}
+                  <div className="post-video-container">
+                    <video
+                      src={post.videoUrl}
+                      poster={post.thumbnailUrl || undefined}
+                      controls
+                      className="post-video"
+                      style={{ width: '100%', display: 'block' }}
                     />
+                    {post.price > 0 && (
+                      <div className="post-buy-section">
+                        <div className="buy-info">
+                          <span className="video-price">${post.price.toFixed(2)}</span>
+                          <p className="buy-label">Exclusive Content</p>
+                        </div>
+                        <button className="buy-button">
+                          🛒 Buy Video
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Post Actions */}
@@ -190,6 +214,24 @@ export default function FeedPage() {
                         </button>
                         {' '}{post.caption}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Tagged Users */}
+                  {parseTaggedUsers(post.taggedUsers).length > 0 && (
+                    <div className="post-tagged-users">
+                      <p className="tagged-label">👥 Tagged: </p>
+                      <div className="tagged-users-list">
+                        {parseTaggedUsers(post.taggedUsers).map((username) => (
+                          <button
+                            key={username}
+                            className="tagged-user-link"
+                            onClick={() => router.push(`/profile/${username}`)}
+                          >
+                            @{username}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 

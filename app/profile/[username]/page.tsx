@@ -21,6 +21,20 @@ interface UserProfile {
   coverImage: string
 }
 
+interface UserPost {
+  id: string
+  userId: string
+  caption: string
+  videoUrl: string
+  thumbnailUrl: string | null
+  price: number
+  taggedUsers: string
+  likes: number
+  comments: number
+  createdAt: string
+  updatedAt: string
+}
+
 // Mock user data
 const mockProfiles: { [key: string]: UserProfile } = {
   john: {
@@ -135,6 +149,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [userPosts, setUserPosts] = useState<UserPost[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -205,6 +220,23 @@ export default function ProfilePage() {
     }
 
     fetchProfile()
+
+    // Fetch user posts
+    const fetchUserPosts = async () => {
+      try {
+        const username = params.username as string
+        const usernameWithoutAt = username.replace('@', '')
+        const response = await fetch(`/api/users/${usernameWithoutAt}/posts`)
+        if (response.ok) {
+          const data = await response.json()
+          setUserPosts(data.posts || [])
+        }
+      } catch (error) {
+        console.error('Error fetching user posts:', error)
+      }
+    }
+
+    fetchUserPosts()
   }, [params.username, router])
 
   if (!isLoggedIn || loading) {
@@ -312,30 +344,32 @@ export default function ProfilePage() {
             {/* Posts Section */}
             <div className="profile-posts">
               <h3 className="posts-title">Last Seen Posts</h3>
-              <div className="posts-grid">
-                {[1, 2, 3, 4, 5, 6].map((post) => (
-                  <div key={post} className="post-card">
-                    <div className="post-card-content">
-                      <div
-                        style={{
-                          background: `linear-gradient(135deg, hsl(${
-                            post * 60
-                          }, 70%, 60%) 0%, hsl(${post * 60 + 30}, 70%, 50%) 100%)`,
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <span style={{ color: 'white', fontSize: '2rem', fontWeight: 'bold' }}>
-                          Post {post}
-                        </span>
+              {userPosts.length === 0 ? (
+                <div className="no-posts-message">
+                  <p>No posts yet</p>
+                </div>
+              ) : (
+                <div className="posts-grid">
+                  {userPosts.map((post) => (
+                    <div key={post.id} className="post-card">
+                      <div className="post-card-content">
+                        <video
+                          src={post.videoUrl}
+                          poster={post.thumbnailUrl || undefined}
+                          controls
+                          className="profile-post-video"
+                        />
+                        <div className="post-card-overlay">
+                          <div className="post-card-info">
+                            <span className="post-price">${post.price.toFixed(2)}</span>
+                            <span className="post-likes">❤️ {post.likes}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

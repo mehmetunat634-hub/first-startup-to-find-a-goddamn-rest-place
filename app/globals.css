@@ -823,11 +823,58 @@ body {
 .post-card-content {
   width: 100%;
   height: 100%;
+  position: relative;
 }
 
 .post-card:hover {
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-post-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.post-card-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0));
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.post-card-info {
+  display: flex;
+  gap: 0.75rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.post-price {
+  background: rgba(102, 126, 234, 0.8);
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+}
+
+.post-likes {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+}
+
+.no-posts-message {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  font-size: 1rem;
 }
 
 .profile-loading,
@@ -2177,6 +2224,73 @@ body {
   display: block;
 }
 
+/* Post Video */
+.post-video-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+}
+
+.post-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.post-buy-section {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
+  padding: 1.5rem 1rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.buy-info {
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+.video-price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.buy-label {
+  font-size: 0.875rem;
+  color: #ccc;
+  margin: 0;
+}
+
+.buy-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.buy-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.buy-button:active {
+  transform: scale(0.98);
+}
+
 /* Post Actions */
 .post-actions {
   padding: 0.75rem 1rem;
@@ -2246,6 +2360,48 @@ body {
 
 .caption-username:hover {
   color: #667eea;
+}
+
+/* Tagged Users */
+.post-tagged-users {
+  padding: 0.5rem 1rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tagged-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #262626;
+}
+
+.tagged-users-list {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.tagged-user-link {
+  background: none;
+  border: 1px solid #e0e0e0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 16px;
+  color: #667eea;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tagged-user-link:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
 }
 
 /* Post Comments Section */
