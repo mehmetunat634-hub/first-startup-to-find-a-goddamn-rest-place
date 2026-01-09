@@ -70,18 +70,50 @@ export default function VideoCallPage() {
 
     checkAuth()
 
-    // Cleanup on unmount
+    // Capture ref values for use in cleanup function
+    const remoteRef = remoteVideoRef.current
+
+    // Cleanup on unmount - stop all camera and WebRTC
     return () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop())
+      // End active session if exists
+      if (sessionId) {
+        fetch('/api/video-calls/end', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        }).catch(console.error)
       }
+
+      // Stop all media tracks
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => {
+          track.stop()
+        })
+        localStreamRef.current = null
+      }
+
+      // Destroy WebRTC peer connection
       if (peerRef.current) {
         peerRef.current.destroy()
+        peerRef.current = null
       }
-      if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
-      if (signalPollIntervalRef.current) clearInterval(signalPollIntervalRef.current)
+
+      // Clear remote video stream
+      if (remoteRef) {
+        remoteRef.srcObject = null
+      }
+
+      // Clear all intervals
+      if (matchPollIntervalRef.current) {
+        clearInterval(matchPollIntervalRef.current)
+        matchPollIntervalRef.current = null
+      }
+      if (signalPollIntervalRef.current) {
+        clearInterval(signalPollIntervalRef.current)
+        signalPollIntervalRef.current = null
+      }
     }
-  }, [router])
+  }, [router, sessionId])
 
   // Handle call duration timer
   useEffect(() => {
