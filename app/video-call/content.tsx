@@ -275,10 +275,19 @@ export default function VideoCallContent() {
         const data = await response.json()
 
         if (data.signals && data.signals.length > 0) {
+          console.log(`📡 Processing ${data.signals.length} signals...`)
           for (const signal of data.signals) {
             try {
               const signalData = JSON.parse(signal.signal_data)
+              console.log(`📨 Received signal from ${signal.from_user_id}: ${signal.signal_type}`)
               peer.signal(signalData)
+
+              // Mark signal as processed to prevent re-processing
+              await fetch('/api/video-calls/signal/mark-processed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ signalId: signal.id }),
+              }).catch(err => console.error('Error marking signal processed:', err))
             } catch (error) {
               console.error('Error processing signal:', error)
             }
@@ -287,7 +296,7 @@ export default function VideoCallContent() {
       } catch (error) {
         console.error('Error fetching signals:', error)
       }
-    }, 500) // Poll every 500ms
+    }, 1000) // Poll every 1000ms (reduced from 500ms to reduce network spam)
   }, [sessionId, userId])
 
   // Poll for match

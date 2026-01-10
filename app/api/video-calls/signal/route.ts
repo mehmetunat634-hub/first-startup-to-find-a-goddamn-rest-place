@@ -19,9 +19,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Store the signal
-    addVideoSignal(sessionId, fromUserId, toUserId, signalType, signalData)
+    const signal = addVideoSignal(sessionId, fromUserId, toUserId, signalType, signalData)
+    console.log(`✅ Signal stored: ${signal.id} from ${fromUserId} to ${toUserId}`)
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, signalId: signal.id })
   } catch (error) {
     console.error('Error sending signal:', error)
     return NextResponse.json(
@@ -49,8 +50,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    // Get signals for this user
+    // Get ONLY unprocessed signals for this user (processed = 0)
     const signals = getVideoSignalsForUser(sessionId, userId)
+
+    if (signals.length > 0) {
+      console.log(`📥 Retrieved ${signals.length} unprocessed signals for user ${userId}`)
+    }
 
     return NextResponse.json({ signals })
   } catch (error) {

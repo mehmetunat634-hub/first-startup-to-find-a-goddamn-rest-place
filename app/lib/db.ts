@@ -308,10 +308,15 @@ export function addVideoSignal(
 export function getVideoSignalsForUser(sessionId: string, userId: string): VideoSignal[] {
   const stmt = db.prepare(`
     SELECT * FROM video_signals
-    WHERE session_id = ? AND to_user_id = ?
+    WHERE session_id = ? AND to_user_id = ? AND processed = 0
     ORDER BY createdAt ASC
   `)
   return stmt.all(sessionId, userId) as VideoSignal[]
+}
+
+export function markSignalAsProcessed(signalId: number): void {
+  const stmt = db.prepare('UPDATE video_signals SET processed = 1 WHERE id = ?')
+  stmt.run(signalId)
 }
 
 export function deleteVideoSignals(sessionId: string): void {
