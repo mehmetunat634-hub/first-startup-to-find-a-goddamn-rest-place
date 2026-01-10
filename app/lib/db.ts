@@ -714,6 +714,18 @@ export function getPostsByUserId(userId: string): Post[] {
   return stmt.all(userId) as Post[]
 }
 
+export function getPostsTaggingUser(userId: string): Post[] {
+  const allPosts = getAllPosts(1000, 0)
+  return allPosts.filter(post => {
+    try {
+      const taggedUsers = JSON.parse(post.taggedUsers)
+      return taggedUsers.includes(userId)
+    } catch {
+      return false
+    }
+  })
+}
+
 export function getAllPosts(limit: number = 50, offset: number = 0): Post[] {
   const stmt = db.prepare(`
     SELECT * FROM posts

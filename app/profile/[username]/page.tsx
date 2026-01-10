@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Navbar from '../../components/Navbar'
 import PendingItemsSection from '../PendingItemsSection'
+import LastSeenPostsSection from '../LastSeenPostsSection'
 import { ArrowLeft, MapPin, Link as LinkIcon, Calendar } from 'lucide-react'
 
 interface UserProfile {
@@ -353,9 +354,12 @@ export default function ProfilePage() {
             {/* Pending Items Section - can be shown based on user authentication */}
             <PendingItemsSection userId={profile.id} username={profile.username} />
 
-            {/* Posts Section */}
+            {/* Last Seen Posts - Posts where user is tagged */}
+            <LastSeenPostsSection userId={profile.id} username={profile.username} />
+
+            {/* User's Own Posts Section */}
             <div className="profile-posts">
-              <h3 className="posts-title">Last Seen Posts</h3>
+              <h3 className="posts-title">Created Posts</h3>
               {userPosts.length === 0 ? (
                 <div className="no-posts-message">
                   <p>No posts yet</p>
