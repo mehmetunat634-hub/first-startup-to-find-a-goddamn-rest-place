@@ -475,81 +475,85 @@ export default function VideoCallContent() {
             </div>
           ) : (
             <div className="video-call-active">
-              <div className="video-call-main">
-                {/* Remote User Video */}
-                <div className="video-call-remote">
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  {matchedUser && (
-                    <div className="remote-info-overlay">
-                      <h2>{matchedUser.displayName}</h2>
-                      <div className="status-indicator">
-                        <span className="status-dot"></span>
-                        Connected
-                      </div>
-                      {isInCall && (
-                        <div className="call-duration">
-                          {formatDuration(callDuration)}
+              {/* Main video container */}
+              <div className="video-call-container">
+                {/* Left side: Video + Chat */}
+                <div className="video-section">
+                  {/* Remote User Video */}
+                  <div className="video-call-remote">
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {matchedUser && (
+                      <div className="remote-info-overlay">
+                        <h2>{matchedUser.displayName}</h2>
+                        <div className="status-indicator">
+                          <span className="status-dot"></span>
+                          Connected
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {isInCall && (
+                          <div className="call-duration">
+                            {formatDuration(callDuration)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chat Bar - overlaid on left side */}
+                  <ChatBar
+                    sessionId={sessionId!}
+                    userId={userId}
+                    remoteUserDisplayName={matchedUser?.displayName || 'User'}
+                  />
                 </div>
 
-                {/* Local User Video (small picture-in-picture) */}
-                <div className="video-call-local-pip">
+                {/* Right side: Local User Video (circular PIP) */}
+                <div className="video-call-local-pip-circular">
                   <video
                     ref={localVideoRef}
                     autoPlay
                     playsInline
                     muted
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
-                </div>
-
-                {/* Call Controls */}
-                <div className="video-call-controls">
-                  <button
-                    className="control-button toggle"
-                    onClick={toggleAudio}
-                    title={audioEnabled ? 'Mute Audio' : 'Unmute Audio'}
-                  >
-                    {audioEnabled ? <Phone size={24} /> : <PhoneOff size={24} />}
-                  </button>
-                  <button
-                    className="control-button toggle"
-                    onClick={toggleVideo}
-                    title={videoEnabled ? 'Disable Video' : 'Enable Video'}
-                  >
-                    {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
-                  </button>
-                  <button
-                    className="control-button decline"
-                    onClick={handleEndCall}
-                    title="End Call"
-                  >
-                    <PhoneOff size={24} />
-                  </button>
-                  <button
-                    className="control-button skip"
-                    onClick={handleSkip}
-                    title="Skip to Next"
-                  >
-                    <SkipForward size={24} />
-                  </button>
                 </div>
               </div>
 
-              {/* Chat Bar */}
-              <ChatBar
-                sessionId={sessionId!}
-                userId={userId}
-                remoteUserDisplayName={matchedUser?.displayName || 'User'}
-              />
+              {/* Call Controls - bottom center */}
+              <div className="video-call-controls">
+                <button
+                  className="control-button toggle"
+                  onClick={toggleAudio}
+                  title={audioEnabled ? 'Mute Audio' : 'Unmute Audio'}
+                >
+                  {audioEnabled ? <Phone size={24} /> : <PhoneOff size={24} />}
+                </button>
+                <button
+                  className="control-button toggle"
+                  onClick={toggleVideo}
+                  title={videoEnabled ? 'Disable Video' : 'Enable Video'}
+                >
+                  {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+                </button>
+                <button
+                  className="control-button decline"
+                  onClick={handleEndCall}
+                  title="End Call"
+                >
+                  <PhoneOff size={24} />
+                </button>
+                <button
+                  className="control-button skip"
+                  onClick={handleSkip}
+                  title="Skip to Next"
+                >
+                  <SkipForward size={24} />
+                </button>
+              </div>
             </div>
           )}
         </div>
