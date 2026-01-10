@@ -168,6 +168,37 @@ db.exec(`
     FOREIGN KEY (pending_item_id) REFERENCES pending_items(id),
     FOREIGN KEY (edited_by_user_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS post_likes (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS post_comments (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS post_purchases (
+    id TEXT PRIMARY KEY,
+    post_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, user_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
 `)
 
 export interface User {
@@ -758,4 +789,112 @@ export function getPostsWithUsers(limit: number = 50, offset: number = 0): PostW
       user: user ? removeUserPassword(user) : undefined,
     }
   })
+}
+
+// Like functions
+export function togglePostLike(postId: string, userId: string): boolean {
+  const existingLike = db.prepare(`
+    SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?
+  `).get(postId, userId)
+
+  if (existingLike) {
+    // Unlike
+    db.prepare('DELETE FROM post_likes WHERE post_id = ? AND user_id = ?').run(postId, userId)
+    return false
+  } else {
+    // Like
+    const likeId = Math.random().toString(36).substr(2, 12)
+    db.prepare(`
+      INSERT INTO post_likes (id, post_id, user_id) VALUES (?, ?, ?)
+    `).run(likeId, postId, userId)
+    return true
+  }
+}
+
+export function isPostLikedByUser(postId: string, userId: string): boolean {
+  const like = db.prepare(`
+    SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?
+  `).get(postId, userId)
+  return !!like
+}
+
+export function getPostLikeCount(postId: string): number {
+  const result = db.prepare(`
+    SELECT COUNT(*) as count FROM post_likes WHERE post_id = ?
+  `).get(postId) as { count: number }
+  return result.count
+}
+
+// Comment functions
+export interface PostComment {
+  id: string
+  post_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  user?: UserPublic
+}
+
+export function createPostComment(postId: string, userId: string, content: string): PostComment {
+  const commentId = Math.random().toString(36).substr(2, 12)
+  const stmt = db.prepare(`
+    INSERT INTO post_comments (id, post_id, user_id, content)
+    VALUES (?, ?, ?, ?)
+  `)
+  stmt.run(commentId, postId, userId, content)
+  return getPostCommentById(commentId)!
+}
+
+export function getPostCommentById(commentId: string): PostComment | null {
+  const stmt = db.prepare('SELECT * FROM post_comments WHERE id = ?')
+  return stmt.get(commentId) as PostComment | null
+}
+
+export function getPostComments(postId: string): PostComment[] {
+  const stmt = db.prepare(`
+    SELECT * FROM post_comments WHERE post_id = ?
+    ORDER BY created_at DESC
+  `)
+  return stmt.all(postId) as PostComment[]
+}
+
+export function getPostCommentsWithUsers(postId: string): (PostComment & { user?: UserPublic })[] {
+  const comments = getPostComments(postId)
+  return comments.map(comment => {
+    const user = getUserById(comment.user_id)
+    return {
+      ...comment,
+      user: user ? removeUserPassword(user) : undefined,
+    }
+  })
+}
+
+// Purchase functions
+export function recordPostPurchase(postId: string, userId: string): void {
+  const purchaseId = Math.random().toString(36).substr(2, 12)
+  try {
+    db.prepare(`
+      INSERT INTO post_purchases (id, post_id, user_id) VALUES (?, ?, ?)
+    `).run(purchaseId, postId, userId)
+  } catch (error) {
+    // Already purchased, ignore duplicate error
+  }
+}
+
+export function hasUserPurchasedPost(postId: string, userId: string): boolean {
+  const purchase = db.prepare(`
+    SELECT id FROM post_purchases WHERE post_id = ? AND user_id = ?
+  `).get(postId, userId)
+  return !!purchase
+}
+
+export function canUserCommentOnPost(postId: string, userId: string): boolean {
+  const post = getPostById(postId)
+  if (!post) return false
+  
+  // Can comment if: post is free OR user purchased it OR user is the post owner
+  if (post.price <= 0) return true
+  if (post.userId === userId) return true
+  return hasUserPurchasedPost(postId, userId)
 }

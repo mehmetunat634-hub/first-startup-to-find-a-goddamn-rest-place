@@ -40,7 +40,11 @@ export default function FeedPage() {
   const [filteredPosts, setFilteredPosts] = useState<FeedPost[]>([])
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [username, setUsername] = useState('')
+  const [userId, setUserId] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+  const [commentText, setCommentText] = useState<Record<string, string>>({})
+  const [postComments, setPostComments] = useState<Record<string, any[]>>({})
 
   const fetchPosts = async () => {
     try {
@@ -72,6 +76,7 @@ export default function FeedPage() {
       if (userData) {
         const parsed = JSON.parse(userData)
         setUsername(parsed.username)
+        setUserId(parsed.id)
       }
 
       // Fetch posts
@@ -90,21 +95,35 @@ export default function FeedPage() {
     return () => clearInterval(interval)
   }, [router])
 
-  const handleLike = (postId: string) => {
-    const newLikedPosts = new Set(likedPosts)
-    if (newLikedPosts.has(postId)) {
-      newLikedPosts.delete(postId)
-    } else {
-      newLikedPosts.add(postId)
-    }
-    setLikedPosts(newLikedPosts)
+  const handleLike = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
 
-    // Update the post likes in the UI
-    setPosts(posts.map(post =>
-      post.id === postId
-        ? { ...post, likes: newLikedPosts.has(postId) ? post.likes + 1 : post.likes - 1 }
-        : post
-    ))
+      if (response.ok) {
+        const data = await response.json()
+        const newLikedPosts = new Set(likedPosts)
+
+        if (data.isLiked) {
+          newLikedPosts.add(postId)
+        } else {
+          newLikedPosts.delete(postId)
+        }
+        setLikedPosts(newLikedPosts)
+
+        // Update the post likes in the UI
+        setPosts(posts.map(post =>
+          post.id === postId
+            ? { ...post, likes: data.likeCount }
+            : post
+        ))
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -164,6 +183,56 @@ export default function FeedPage() {
     const filtered = filterPosts(searchQuery, posts)
     setFilteredPosts(filtered)
   }, [searchQuery, posts])
+
+  const fetchCommentsForPost = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments`)
+      if (response.ok) {
+        const data = await response.json()
+        setPostComments({ ...postComments, [postId]: data.comments || [] })
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error)
+    }
+  }
+
+  const toggleCommentsSection = async (postId: string) => {
+    const newExpanded = new Set(expandedComments)
+    if (newExpanded.has(postId)) {
+      newExpanded.delete(postId)
+    } else {
+      newExpanded.add(postId)
+      // Fetch comments when expanding
+      await fetchCommentsForPost(postId)
+    }
+    setExpandedComments(newExpanded)
+  }
+
+  const handleCommentSubmit = async (postId: string) => {
+    const content = commentText[postId]?.trim()
+    if (!content) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, content }),
+      })
+
+      if (response.ok) {
+        // Clear input and refetch comments for this post
+        setCommentText({ ...commentText, [postId]: '' })
+        await fetchCommentsForPost(postId)
+      } else {
+        const error = await response.json()
+        console.error('Error posting comment:', error.error)
+      }
+    } catch (error) {
+      console.error('Error submitting comment:', error)
+    }
+  }
 
   if (!isLoggedIn || loading) {
     return (
@@ -344,17 +413,60 @@ export default function FeedPage() {
 
                   {/* Post Comments Section */}
                   <div className="post-comments-section">
-                    <p className="view-comments">
+                    <button
+                      className="view-comments-button"
+                      onClick={() => toggleCommentsSection(post.id)}
+                    >
                       View all {post.comments} {post.comments === 1 ? 'comment' : 'comments'}
-                    </p>
-                    <div className="post-comment-input">
-                      <input
-                        type="text"
-                        placeholder="Add a comment..."
-                        className="comment-input"
-                      />
-                      <button className="post-button">Post</button>
-                    </div>
+                    </button>
+
+                    {expandedComments.has(post.id) && (
+                      <div className="comments-expanded">
+                        {/* Display existing comments */}
+                        <div className="comments-list">
+                          {postComments[post.id]?.length ? (
+                            postComments[post.id].map((comment: any) => (
+                              <div key={comment.id} className="comment-item">
+                                <div className="comment-user-info">
+                                  <div className="comment-avatar">
+                                    {comment.user?.displayName?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  <div className="comment-details">
+                                    <p className="comment-username">
+                                      {comment.user?.displayName || 'Unknown'}
+                                    </p>
+                                    <p className="comment-time">
+                                      {formatDate(comment.created_at)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <p className="comment-content">{comment.content}</p>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="no-comments">No comments yet</p>
+                          )}
+                        </div>
+
+                        {/* Comment input */}
+                        <div className="post-comment-input">
+                          <input
+                            type="text"
+                            placeholder="Add a comment..."
+                            value={commentText[post.id] || ''}
+                            onChange={(e) => setCommentText({ ...commentText, [post.id]: e.target.value })}
+                            onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit(post.id)}
+                            className="comment-input"
+                          />
+                          <button
+                            onClick={() => handleCommentSubmit(post.id)}
+                            className="post-button"
+                          >
+                            Post
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </article>
               ))}
