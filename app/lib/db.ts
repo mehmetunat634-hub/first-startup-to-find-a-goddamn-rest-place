@@ -27,6 +27,10 @@ db.exec(`
     user1_id TEXT NOT NULL,
     user2_id TEXT,
     status TEXT DEFAULT 'waiting',
+    recording_path TEXT,
+    recording_duration INTEGER DEFAULT 0,
+    recording_file_size INTEGER DEFAULT 0,
+    call_duration INTEGER DEFAULT 0,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user1_id) REFERENCES users(id),
@@ -69,9 +73,50 @@ db.exec(`
     taggedUsers TEXT DEFAULT '[]',
     likes INTEGER DEFAULT 0,
     comments INTEGER DEFAULT 0,
+    recording_session_id TEXT,
+    approved_by_user1 BOOLEAN DEFAULT 0,
+    approved_by_user2 BOOLEAN DEFAULT 0,
+    revenue_split_user1 REAL DEFAULT 0,
+    revenue_split_user2 REAL DEFAULT 0,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (userId) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS pending_items (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    user1_id TEXT NOT NULL,
+    user2_id TEXT NOT NULL,
+    recording_path TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    price REAL,
+    user1_status TEXT DEFAULT 'pending',
+    user2_status TEXT DEFAULT 'pending',
+    publish_platform TEXT,
+    published_post_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES video_sessions(id),
+    FOREIGN KEY (user1_id) REFERENCES users(id),
+    FOREIGN KEY (user2_id) REFERENCES users(id),
+    FOREIGN KEY (published_post_id) REFERENCES posts(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS item_edits (
+    id TEXT PRIMARY KEY,
+    pending_item_id TEXT NOT NULL,
+    edited_by_user_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    approved_by_user1 BOOLEAN DEFAULT 0,
+    approved_by_user2 BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (pending_item_id) REFERENCES pending_items(id),
+    FOREIGN KEY (edited_by_user_id) REFERENCES users(id)
   );
 `)
 
@@ -210,6 +255,10 @@ export interface VideoSession {
   user1_id: string
   user2_id: string | null
   status: 'waiting' | 'active' | 'ended'
+  recording_path: string | null
+  recording_duration: number
+  recording_file_size: number
+  call_duration: number
   createdAt: string
   updatedAt: string
 }
@@ -369,6 +418,171 @@ export function deleteSessionMessages(sessionId: string): void {
   stmt.run(sessionId)
 }
 
+// Pending Items and Item Edits functions
+export interface PendingItem {
+  id: string
+  session_id: string
+  user1_id: string
+  user2_id: string
+  recording_path: string
+  title: string | null
+  description: string | null
+  price: number | null
+  user1_status: 'pending' | 'approved' | 'rejected'
+  user2_status: 'pending' | 'approved' | 'rejected'
+  publish_platform: string | null
+  published_post_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ItemEdit {
+  id: string
+  pending_item_id: string
+  edited_by_user_id: string
+  field_name: string
+  old_value: string | null
+  new_value: string | null
+  approved_by_user1: boolean
+  approved_by_user2: boolean
+  created_at: string
+  updated_at: string
+}
+
+export function createPendingItem(
+  sessionId: string,
+  user1Id: string,
+  user2Id: string,
+  recordingPath: string
+): PendingItem {
+  const id = Math.random().toString(36).substr(2, 12)
+  const stmt = db.prepare(`
+    INSERT INTO pending_items (id, session_id, user1_id, user2_id, recording_path)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+  stmt.run(id, sessionId, user1Id, user2Id, recordingPath)
+  return getPendingItemById(id)!
+}
+
+export function getPendingItemById(id: string): PendingItem | null {
+  const stmt = db.prepare('SELECT * FROM pending_items WHERE id = ?')
+  return stmt.get(id) as PendingItem | null
+}
+
+export function getPendingItemsByUserId(userId: string): PendingItem[] {
+  const stmt = db.prepare(`
+    SELECT * FROM pending_items
+    WHERE user1_id = ? OR user2_id = ?
+    ORDER BY created_at DESC
+  `)
+  return stmt.all(userId, userId) as PendingItem[]
+}
+
+export function getPendingItemsBySessionId(sessionId: string): PendingItem | null {
+  const stmt = db.prepare('SELECT * FROM pending_items WHERE session_id = ?')
+  return stmt.get(sessionId) as PendingItem | null
+}
+
+export function updatePendingItem(
+  id: string,
+  data: Partial<Omit<PendingItem, 'id' | 'session_id' | 'user1_id' | 'user2_id' | 'recording_path' | 'created_at'>>
+): PendingItem | null {
+  const item = getPendingItemById(id)
+  if (!item) return null
+
+  const updates: string[] = []
+  const values: any[] = []
+
+  if (data.title !== undefined) {
+    updates.push('title = ?')
+    values.push(data.title)
+  }
+  if (data.description !== undefined) {
+    updates.push('description = ?')
+    values.push(data.description)
+  }
+  if (data.price !== undefined) {
+    updates.push('price = ?')
+    values.push(data.price)
+  }
+  if (data.user1_status) {
+    updates.push('user1_status = ?')
+    values.push(data.user1_status)
+  }
+  if (data.user2_status) {
+    updates.push('user2_status = ?')
+    values.push(data.user2_status)
+  }
+  if (data.publish_platform !== undefined) {
+    updates.push('publish_platform = ?')
+    values.push(data.publish_platform)
+  }
+  if (data.published_post_id !== undefined) {
+    updates.push('published_post_id = ?')
+    values.push(data.published_post_id)
+  }
+
+  if (updates.length === 0) return item
+
+  updates.push('updated_at = CURRENT_TIMESTAMP')
+  values.push(id)
+
+  const stmt = db.prepare(`
+    UPDATE pending_items
+    SET ${updates.join(', ')}
+    WHERE id = ?
+  `)
+  stmt.run(...values)
+  return getPendingItemById(id)
+}
+
+export function createItemEdit(
+  pendingItemId: string,
+  editedByUserId: string,
+  fieldName: string,
+  oldValue: string | null,
+  newValue: string | null
+): ItemEdit {
+  const id = Math.random().toString(36).substr(2, 12)
+  const stmt = db.prepare(`
+    INSERT INTO item_edits (id, pending_item_id, edited_by_user_id, field_name, old_value, new_value)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  stmt.run(id, pendingItemId, editedByUserId, fieldName, oldValue, newValue)
+  return getItemEditById(id)!
+}
+
+export function getItemEditById(id: string): ItemEdit | null {
+  const stmt = db.prepare('SELECT * FROM item_edits WHERE id = ?')
+  return stmt.get(id) as ItemEdit | null
+}
+
+export function getItemEditsByPendingItemId(pendingItemId: string): ItemEdit[] {
+  const stmt = db.prepare(`
+    SELECT * FROM item_edits
+    WHERE pending_item_id = ?
+    ORDER BY created_at DESC
+  `)
+  return stmt.all(pendingItemId) as ItemEdit[]
+}
+
+export function updateItemEditApprovals(
+  id: string,
+  approvedByUser1: boolean,
+  approvedByUser2: boolean
+): ItemEdit | null {
+  const edit = getItemEditById(id)
+  if (!edit) return null
+
+  const stmt = db.prepare(`
+    UPDATE item_edits
+    SET approved_by_user1 = ?, approved_by_user2 = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `)
+  stmt.run(approvedByUser1 ? 1 : 0, approvedByUser2 ? 1 : 0, id)
+  return getItemEditById(id)
+}
+
 // Post functions
 export interface Post {
   id: string
@@ -380,6 +594,11 @@ export interface Post {
   taggedUsers: string
   likes: number
   comments: number
+  recording_session_id: string | null
+  approved_by_user1: boolean
+  approved_by_user2: boolean
+  revenue_split_user1: number
+  revenue_split_user2: number
   createdAt: string
   updatedAt: string
 }
@@ -394,14 +613,32 @@ export function createPost(
   videoUrl: string,
   thumbnailUrl?: string,
   price: number = 0,
-  taggedUsers: string = '[]'
+  taggedUsers: string = '[]',
+  recordingSessionId?: string,
+  approvedByUser1: boolean = false,
+  approvedByUser2: boolean = false,
+  revenueSplitUser1: number = 0,
+  revenueSplitUser2: number = 0
 ): Post {
   const postId = Math.random().toString(36).substr(2, 12)
   const stmt = db.prepare(`
-    INSERT INTO posts (id, userId, caption, videoUrl, thumbnailUrl, price, taggedUsers)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts (id, userId, caption, videoUrl, thumbnailUrl, price, taggedUsers, recording_session_id, approved_by_user1, approved_by_user2, revenue_split_user1, revenue_split_user2)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
-  stmt.run(postId, userId, caption, videoUrl, thumbnailUrl || null, price, taggedUsers)
+  stmt.run(
+    postId,
+    userId,
+    caption,
+    videoUrl,
+    thumbnailUrl || null,
+    price,
+    taggedUsers,
+    recordingSessionId || null,
+    approvedByUser1 ? 1 : 0,
+    approvedByUser2 ? 1 : 0,
+    revenueSplitUser1,
+    revenueSplitUser2
+  )
   return getPostById(postId)!
 }
 
