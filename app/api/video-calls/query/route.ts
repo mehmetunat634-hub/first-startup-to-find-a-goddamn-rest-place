@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createVideoSession, getUserById, getVideoSessionById } from '@/app/lib/db'
+import { createVideoSession, getUserById } from '@/app/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,7 +7,10 @@ export async function POST(request: NextRequest) {
     const { userId } = body
 
     if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'User ID required' },
+        { status: 400 }
+      )
     }
 
     // Verify user exists
