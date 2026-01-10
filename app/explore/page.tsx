@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
-import { Flower, ArrowRight, Video } from 'lucide-react'
+import { Flower, ArrowRight, Video, RefreshCw } from 'lucide-react'
 
 interface WaitingUser {
   sessionId: string
@@ -23,9 +23,11 @@ export default function ExplorePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [waitingUsers, setWaitingUsers] = useState<WaitingUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [currentUsername, setCurrentUsername] = useState<string>('')
   const [catchingSession, setCatchingSession] = useState<string | null>(null)
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
 
   useEffect(() => {
     // Check if user is logged in
@@ -55,11 +57,13 @@ export default function ExplorePage() {
             (session: WaitingUser) => session.user.username !== currentUsername
           )
           setWaitingUsers(filtered)
+          setLastRefreshTime(new Date())
         }
       } catch (error) {
         console.error('Error fetching waiting sessions:', error)
       } finally {
         setLoading(false)
+        setRefreshing(false)
       }
     }
 
@@ -69,6 +73,32 @@ export default function ExplorePage() {
 
     return () => clearInterval(interval)
   }, [router, currentUsername])
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true)
+    const response = await fetch('/api/video-calls/waiting')
+    if (response.ok) {
+      const data = await response.json()
+      const filtered = data.filter(
+        (session: WaitingUser) => session.user.username !== currentUsername
+      )
+      setWaitingUsers(filtered)
+      setLastRefreshTime(new Date())
+    }
+    setRefreshing(false)
+  }
+
+  const formatLastRefreshTime = (date: Date | null) => {
+    if (!date) return 'Never'
+    const now = new Date()
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    if (seconds < 5) return 'Just now'
+    if (seconds < 60) return `${seconds}s ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    return `${hours}h ago`
+  }
 
   const handleCatch = async (sessionId: string, targetUsername: string) => {
     try {
@@ -112,8 +142,23 @@ export default function ExplorePage() {
       <main className="home-main">
         <div className="explore-container">
           <div className="explore-header">
-            <h1>🌹 Catch The Flower 🌹</h1>
-            <p>People are waiting! Catch them before someone else does</p>
+            <div className="explore-header-content">
+              <div className="explore-title-section">
+                <h1>🌹 Catch The Flower 🌹</h1>
+                <p>People are waiting! Catch them before someone else does</p>
+              </div>
+              <div className="explore-controls">
+                <button
+                  className="refresh-button"
+                  onClick={handleManualRefresh}
+                  disabled={refreshing}
+                  title="Refresh flowers list"
+                >
+                  <RefreshCw size={20} className={refreshing ? 'spinning' : ''} />
+                </button>
+                <span className="last-refresh">Updated {formatLastRefreshTime(lastRefreshTime)}</span>
+              </div>
+            </div>
           </div>
 
           {waitingUsers.length === 0 ? (
