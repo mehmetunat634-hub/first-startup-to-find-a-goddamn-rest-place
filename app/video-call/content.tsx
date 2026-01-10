@@ -117,6 +117,14 @@ export default function VideoCallContent() {
     checkAuth()
   }, [router, searchParams])
 
+  // Bind local stream to video element after component mounts
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current
+      console.log('✅ Local stream connected to video element')
+    }
+  }, [])
+
   // Fetch caught session details to get the other user's info
   useEffect(() => {
     if (!caughtSessionId || !userId || matchedUser) return
@@ -438,17 +446,22 @@ export default function VideoCallContent() {
               </p>
 
               {/* Local camera preview */}
-              {localStreamRef.current && (
-                <div className="local-preview-welcome">
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    style={{ width: '100%', borderRadius: '12px' }}
-                  />
-                </div>
-              )}
+              <div className="local-preview-welcome">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    height: '250px',
+                    objectFit: 'cover',
+                    backgroundColor: '#000',
+                    display: localStreamRef.current ? 'block' : 'none'
+                  }}
+                />
+              </div>
 
               <button
                 className="video-call-button"
@@ -476,7 +489,7 @@ export default function VideoCallContent() {
           ) : (
             <div className="video-call-active">
               {/* Main video container */}
-              <div className="video-call-container">
+              <div className="video-call-main">
                 {/* Left side: Video + Chat */}
                 <div className="video-section">
                   {/* Remote User Video */}

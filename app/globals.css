@@ -1324,11 +1324,27 @@ body {
 }
 
 .video-call-container {
+  width: 100%;
+  max-width: 1200px;
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-call-main {
   display: flex;
   width: 100%;
   height: 100%;
   position: relative;
   overflow: hidden;
+  height: 100%;
+  width: 100%;
 }
 
 .video-section {
@@ -1337,15 +1353,8 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
-}
-
-.video-call-main {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr auto;
-  gap: 1rem;
-  flex: 1;
-  min-width: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .video-call-remote {
@@ -1353,8 +1362,20 @@ body {
   height: 100%;
   border-radius: 12px;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000;
   position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-call-remote video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
 .remote-video-container {
