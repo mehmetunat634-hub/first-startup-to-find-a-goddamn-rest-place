@@ -3,9 +3,11 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Navbar from '../../components/Navbar'
+import PendingItemsSection from '../PendingItemsSection'
 import { ArrowLeft, MapPin, Link as LinkIcon, Calendar } from 'lucide-react'
 
 interface UserProfile {
+  id: string
   username: string
   displayName: string
   firstName: string
@@ -38,6 +40,7 @@ interface UserPost {
 // Mock user data
 const mockProfiles: { [key: string]: UserProfile } = {
   john: {
+    id: 'john123',
     username: 'john',
     displayName: 'John Doe',
     firstName: 'John',
@@ -53,6 +56,7 @@ const mockProfiles: { [key: string]: UserProfile } = {
     coverImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   },
   jane: {
+    id: 'jane456',
     username: 'jane',
     displayName: 'Jane Smith',
     firstName: 'Jane',
@@ -68,6 +72,7 @@ const mockProfiles: { [key: string]: UserProfile } = {
     coverImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
   },
   alex: {
+    id: 'alex789',
     username: 'alex',
     displayName: 'Alex Johnson',
     firstName: 'Alex',
@@ -83,6 +88,7 @@ const mockProfiles: { [key: string]: UserProfile } = {
     coverImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
   },
   mehmetunat634: {
+    id: 'mehmetunat634',
     username: 'mehmetunat634',
     displayName: 'Mehmet Ünal',
     firstName: 'Mehmet',
@@ -98,6 +104,7 @@ const mockProfiles: { [key: string]: UserProfile } = {
     coverImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   },
   sarah: {
+    id: 'sarah101',
     username: 'sarah',
     displayName: 'Sarah Wilson',
     firstName: 'Sarah',
@@ -113,6 +120,7 @@ const mockProfiles: { [key: string]: UserProfile } = {
     coverImage: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
   },
   mike: {
+    id: 'mike202',
     username: 'mike',
     displayName: 'Mike Chen',
     firstName: 'Mike',
@@ -128,6 +136,7 @@ const mockProfiles: { [key: string]: UserProfile } = {
     coverImage: 'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
   },
   emma: {
+    id: 'emma303',
     username: 'emma',
     displayName: 'Emma Davis',
     firstName: 'Emma',
@@ -340,6 +349,9 @@ export default function ProfilePage() {
             <div className="profile-actions">
               <button className="action-button primary">Follow</button>
             </div>
+
+            {/* Pending Items Section - can be shown based on user authentication */}
+            <PendingItemsSection userId={profile.id} username={profile.username} />
 
             {/* Posts Section */}
             <div className="profile-posts">
