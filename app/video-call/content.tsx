@@ -48,6 +48,7 @@ export default function VideoCallContent() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const recordingStartTimeRef = useRef<number | null>(null)
+  const recordingAnimationFrameRef = useRef<number | null>(null)
 
   // Handle find match - defined early to be used in auto-start effect
   const handleFindMatch = useCallback(async () => {
@@ -75,6 +76,37 @@ export default function VideoCallContent() {
       setIsSearching(false)
     }
   }, [userId])
+
+  // Draw frames to canvas during recording
+  const drawFramesToCanvas = useCallback(() => {
+    const canvas = canvasRef.current
+    const localVideo = localVideoRef.current
+    const remoteVideo = remoteVideoRef.current
+
+    if (!canvas || !localVideo || !remoteVideo) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Clear canvas
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Draw local video on the left (640x720)
+    if (localVideo.readyState === 4) { // HAVE_ENOUGH_DATA = 4
+      ctx.drawImage(localVideo, 0, 0, 640, 720)
+    }
+
+    // Draw remote video on the right (640x720)
+    if (remoteVideo.readyState === 4) { // HAVE_ENOUGH_DATA = 4
+      ctx.drawImage(remoteVideo, 640, 0, 640, 720)
+    }
+
+    // Continue drawing frames while recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      recordingAnimationFrameRef.current = requestAnimationFrame(drawFramesToCanvas)
+    }
+  }, [])
 
   // Start recording both video streams and audio
   const startRecording = useCallback(async () => {
@@ -153,10 +185,13 @@ export default function VideoCallContent() {
 
       mediaRecorder.start()
       console.log('🎬 Recording started')
+
+      // Start drawing frames to canvas for recording
+      drawFramesToCanvas()
     } catch (error) {
       console.error('Error starting recording:', error)
     }
-  }, [])
+  }, [drawFramesToCanvas])
 
   // Stop recording and save
   const stopRecording = useCallback(async () => {
@@ -203,6 +238,13 @@ export default function VideoCallContent() {
       }
 
       mediaRecorder.stop()
+
+      // Stop the drawing animation frame
+      if (recordingAnimationFrameRef.current) {
+        cancelAnimationFrame(recordingAnimationFrameRef.current)
+        recordingAnimationFrameRef.current = null
+      }
+
       mediaRecorderRef.current = null
       recordedChunksRef.current = []
       recordingStartTimeRef.current = null
