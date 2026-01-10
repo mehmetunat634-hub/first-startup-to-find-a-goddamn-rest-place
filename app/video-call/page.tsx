@@ -150,13 +150,6 @@ export default function VideoCallPage() {
     }
   }, [])
 
-  // Auto-start search when user is loaded
-  useEffect(() => {
-    if (userId && !sessionId && !isSearching) {
-      handleFindMatch()
-    }
-  }, [userId, sessionId, isSearching, handleFindMatch])
-
   // Handle call duration timer
   useEffect(() => {
     if (!isInCall) return
