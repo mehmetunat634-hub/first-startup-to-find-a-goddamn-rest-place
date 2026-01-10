@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import SimplePeer, { Instance as PeerInstance } from 'simple-peer'
 import Navbar from '../components/Navbar'
 import ChatBar from './ChatBar'
+import DisconnectModal from './DisconnectModal'
 import { Phone, PhoneOff, SkipForward, UserPlus, Video, VideoOff, Loader } from 'lucide-react'
 
 interface RemoteUser {
@@ -29,6 +30,8 @@ export default function VideoCallContent() {
   const [audioEnabled, setAudioEnabled] = useState(true)
   const [initiator, setInitiator] = useState(false)
   const [caughtSessionId, setCaughtSessionId] = useState<string | null>(null)
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false)
+  const [pendingItemId, setPendingItemId] = useState<string | null>(null)
 
   // Video and WebRTC refs
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -546,7 +549,7 @@ export default function VideoCallContent() {
     // Create pending item if recording was successful
     if (recordingPath) {
       try {
-        await fetch('/api/video-calls/pending-items/create', {
+        const response = await fetch('/api/video-calls/pending-items/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -556,13 +559,37 @@ export default function VideoCallContent() {
             user2Id: matchedUser.id,
           }),
         })
-        console.log('📋 Pending item created for recording')
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('📋 Pending item created:', data.pendingItem.id)
+
+          // Store pending item ID and show modal
+          setPendingItemId(data.pendingItem.id)
+          setShowDisconnectModal(true)
+
+          // Clear signal polling interval
+          if (signalPollIntervalRef.current) {
+            clearInterval(signalPollIntervalRef.current)
+            signalPollIntervalRef.current = null
+          }
+
+          if (peerRef.current) {
+            peerRef.current.destroy()
+            peerRef.current = null
+          }
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = null
+          }
+
+          return
+        }
       } catch (error) {
         console.error('Error creating pending item:', error)
       }
     }
 
-    // Reset state and find new match
+    // If no recording, reset state and find new match
     setMatchedUser(null)
     setIsInCall(false)
     setCallDuration(0)
@@ -604,7 +631,7 @@ export default function VideoCallContent() {
     // Create pending item if recording was successful
     if (recordingPath && matchedUser) {
       try {
-        await fetch('/api/video-calls/pending-items/create', {
+        const response = await fetch('/api/video-calls/pending-items/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -614,7 +641,36 @@ export default function VideoCallContent() {
             user2Id: matchedUser.id,
           }),
         })
-        console.log('📋 Pending item created for recording')
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('📋 Pending item created:', data.pendingItem.id)
+
+          // Store pending item ID and show modal
+          setPendingItemId(data.pendingItem.id)
+          setShowDisconnectModal(true)
+
+          // Clear polling intervals
+          if (signalPollIntervalRef.current) {
+            clearInterval(signalPollIntervalRef.current)
+            signalPollIntervalRef.current = null
+          }
+          if (matchPollIntervalRef.current) {
+            clearInterval(matchPollIntervalRef.current)
+            matchPollIntervalRef.current = null
+          }
+
+          if (peerRef.current) {
+            peerRef.current.destroy()
+            peerRef.current = null
+          }
+
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = null
+          }
+
+          return
+        }
       } catch (error) {
         console.error('Error creating pending item:', error)
       }
@@ -645,6 +701,58 @@ export default function VideoCallContent() {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null
     }
+  }
+
+  const handleSavePendingItemDetails = async (data: {
+    title: string
+    description: string
+    price: number
+  }) => {
+    if (!pendingItemId) return
+
+    try {
+      const response = await fetch(`/api/video-calls/pending-items/${pendingItemId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          price: data.price,
+          user1_status: 'approved',
+        }),
+      })
+
+      if (response.ok) {
+        console.log('✅ Pending item updated with details')
+        setShowDisconnectModal(false)
+        setPendingItemId(null)
+
+        // Reset state and find new match
+        setMatchedUser(null)
+        setIsInCall(false)
+        setSessionId(null)
+        setCallDuration(0)
+
+        // Start new session
+        handleFindMatch()
+      } else {
+        throw new Error('Failed to update pending item')
+      }
+    } catch (error) {
+      console.error('Error saving pending item details:', error)
+      throw error
+    }
+  }
+
+  const handleCloseDisconnectModal = () => {
+    setShowDisconnectModal(false)
+    // Reset state and find new match
+    setMatchedUser(null)
+    setIsInCall(false)
+    setSessionId(null)
+    setCallDuration(0)
+    setPendingItemId(null)
+    handleFindMatch()
   }
 
   const toggleVideo = () => {
@@ -690,6 +798,14 @@ export default function VideoCallContent() {
         style={{ display: 'none' }}
       />
       <Navbar />
+      {pendingItemId && (
+        <DisconnectModal
+          isOpen={showDisconnectModal}
+          pendingItemId={pendingItemId}
+          onClose={handleCloseDisconnectModal}
+          onSave={handleSavePendingItemDetails}
+        />
+      )}
       <main className="home-main">
         <div className="video-call-container">
           {!isInCall ? (
