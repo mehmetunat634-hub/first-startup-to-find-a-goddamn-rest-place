@@ -32,6 +32,7 @@ export default function VideoCallPage() {
   const localStreamRef = useRef<MediaStream | null>(null)
   const matchPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const signalPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
 
   // Handle find match - defined early to be used in auto-start effect
   const handleFindMatch = useCallback(async () => {
@@ -59,6 +60,11 @@ export default function VideoCallPage() {
       setIsSearching(false)
     }
   }, [userId])
+
+  // Sync sessionId to ref for cleanup access
+  useEffect(() => {
+    sessionIdRef.current = sessionId
+  }, [sessionId])
 
   // Initialize and get user info
   useEffect(() => {
@@ -96,18 +102,20 @@ export default function VideoCallPage() {
     }
 
     checkAuth()
+  }, [router])
 
-    // Capture ref values for use in cleanup function
+  // Cleanup on unmount - end session, stop camera, cleanup WebRTC
+  useEffect(() => {
     const remoteRef = remoteVideoRef.current
 
-    // Cleanup on unmount - stop all camera and WebRTC
+    // Cleanup when component unmounts or when navigating away
     return () => {
-      // End active session if exists
-      if (sessionId) {
+      // End active session if exists (uses ref to get current sessionId)
+      if (sessionIdRef.current) {
         fetch('/api/video-calls/end', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
+          body: JSON.stringify({ sessionId: sessionIdRef.current }),
         }).catch(console.error)
       }
 
@@ -140,7 +148,7 @@ export default function VideoCallPage() {
         signalPollIntervalRef.current = null
       }
     }
-  }, [router, sessionId])
+  }, [])
 
   // Auto-start search when user is loaded
   useEffect(() => {
