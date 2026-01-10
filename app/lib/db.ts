@@ -7,6 +7,36 @@ const db = new Database(dbPath)
 // Enable foreign keys
 db.pragma('foreign_keys = ON')
 
+// Migration: Add missing columns to posts table
+function migrateDatabase() {
+  try {
+    const columnsToAdd = [
+      { column: 'recording_session_id', type: 'TEXT', check: 'recording_session_id' },
+      { column: 'approved_by_user1', type: 'BOOLEAN DEFAULT 0', check: 'approved_by_user1' },
+      { column: 'approved_by_user2', type: 'BOOLEAN DEFAULT 0', check: 'approved_by_user2' },
+      { column: 'revenue_split_user1', type: 'REAL DEFAULT 0', check: 'revenue_split_user1' },
+      { column: 'revenue_split_user2', type: 'REAL DEFAULT 0', check: 'revenue_split_user2' },
+    ]
+
+    for (const { column, type, check } of columnsToAdd) {
+      try {
+        db.exec(`ALTER TABLE posts ADD COLUMN ${column} ${type}`)
+        console.log(`✅ Added column ${column} to posts table`)
+      } catch (error: any) {
+        if (error.message.includes('duplicate column')) {
+          // Column already exists, skip
+        } else {
+          console.error(`Error adding column ${column}:`, error)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Migration error:', error)
+  }
+}
+
+migrateDatabase()
+
 // Initialize database schema
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
