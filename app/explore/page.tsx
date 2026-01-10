@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
-import { Flower, ArrowRight } from 'lucide-react'
+import { Flower, ArrowRight, Video } from 'lucide-react'
 
 interface WaitingUser {
   sessionId: string
@@ -121,7 +121,14 @@ export default function ExplorePage() {
               <div className="empty-state">
                 <Flower size={48} />
                 <p>No flowers being thrown right now...</p>
-                <p className="small-text">Go to Video Call to throw your flower!</p>
+                <p className="small-text">Be the first to throw your flower!</p>
+                <button
+                  className="throw-flower-button"
+                  onClick={() => router.push('/video-call')}
+                >
+                  <Video size={20} />
+                  Throw Your Flower
+                </button>
               </div>
             </div>
           ) : (
