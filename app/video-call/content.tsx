@@ -221,6 +221,18 @@ export default function VideoCallContent() {
   const startWebRTCConnection = useCallback((remoteUserId: string, isInitiator: boolean) => {
     if (!localStreamRef.current || !sessionId) return
 
+    // Clear any existing signal polling interval before creating a new one
+    if (signalPollIntervalRef.current) {
+      clearInterval(signalPollIntervalRef.current)
+      signalPollIntervalRef.current = null
+    }
+
+    // Destroy any existing peer before creating a new one
+    if (peerRef.current) {
+      peerRef.current.destroy()
+      peerRef.current = null
+    }
+
     // Create peer connection
     const peer = new SimplePeer({
       initiator: isInitiator,
@@ -288,12 +300,26 @@ export default function VideoCallContent() {
             try {
               // Check if peer still exists before processing signal
               if (!peerRef.current) {
-                console.log('Peer destroyed, skipping signal processing')
+                console.log('⚠️ Peer destroyed, skipping signal processing')
                 break
               }
               const signalData = JSON.parse(signal.signal_data)
               console.log(`📨 Received signal from ${signal.from_user_id}: ${signal.signal_type}`)
-              peerRef.current.signal(signalData)
+
+              // Try to signal, but handle case where peer was destroyed
+              try {
+                peerRef.current.signal(signalData)
+              } catch (signalError: any) {
+                if (signalError.message?.includes('destroyed')) {
+                  console.log('⚠️ Peer was destroyed while processing signal, clearing polling')
+                  if (signalPollIntervalRef.current) {
+                    clearInterval(signalPollIntervalRef.current)
+                    signalPollIntervalRef.current = null
+                  }
+                  break
+                }
+                throw signalError
+              }
 
               // Mark signal as processed to prevent re-processing
               await fetch('/api/video-calls/signal/mark-processed', {
@@ -302,7 +328,7 @@ export default function VideoCallContent() {
                 body: JSON.stringify({ signalId: signal.id }),
               }).catch(err => console.error('Error marking signal processed:', err))
             } catch (error) {
-              console.error('Error processing signal:', error)
+              console.error('❌ Error processing signal:', error)
             }
           }
         }
