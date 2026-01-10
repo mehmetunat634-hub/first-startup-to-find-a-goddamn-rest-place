@@ -265,6 +265,11 @@ export default function VideoCallContent() {
 
     peer.on('close', () => {
       console.log('WebRTC Closed')
+      // Clear signal polling when peer closes
+      if (signalPollIntervalRef.current) {
+        clearInterval(signalPollIntervalRef.current)
+        signalPollIntervalRef.current = null
+      }
     })
 
     peerRef.current = peer
@@ -281,9 +286,14 @@ export default function VideoCallContent() {
           console.log(`📡 Processing ${data.signals.length} signals...`)
           for (const signal of data.signals) {
             try {
+              // Check if peer still exists before processing signal
+              if (!peerRef.current) {
+                console.log('Peer destroyed, skipping signal processing')
+                break
+              }
               const signalData = JSON.parse(signal.signal_data)
               console.log(`📨 Received signal from ${signal.from_user_id}: ${signal.signal_type}`)
-              peer.signal(signalData)
+              peerRef.current.signal(signalData)
 
               // Mark signal as processed to prevent re-processing
               await fetch('/api/video-calls/signal/mark-processed', {
@@ -362,6 +372,13 @@ export default function VideoCallContent() {
     setMatchedUser(null)
     setIsInCall(false)
     setCallDuration(0)
+
+    // Clear signal polling interval
+    if (signalPollIntervalRef.current) {
+      clearInterval(signalPollIntervalRef.current)
+      signalPollIntervalRef.current = null
+    }
+
     if (peerRef.current) {
       peerRef.current.destroy()
       peerRef.current = null
@@ -394,6 +411,16 @@ export default function VideoCallContent() {
     setCallDuration(0)
     setIsSearching(false)
 
+    // Clear polling intervals
+    if (signalPollIntervalRef.current) {
+      clearInterval(signalPollIntervalRef.current)
+      signalPollIntervalRef.current = null
+    }
+    if (matchPollIntervalRef.current) {
+      clearInterval(matchPollIntervalRef.current)
+      matchPollIntervalRef.current = null
+    }
+
     if (peerRef.current) {
       peerRef.current.destroy()
       peerRef.current = null
@@ -402,9 +429,6 @@ export default function VideoCallContent() {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null
     }
-
-    if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
-    if (signalPollIntervalRef.current) clearInterval(signalPollIntervalRef.current)
   }
 
   const toggleVideo = () => {
