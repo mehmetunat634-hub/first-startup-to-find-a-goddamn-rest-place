@@ -137,8 +137,8 @@ export default function VideoCallContent() {
           const otherUserId = sessionData.user1_id === userId ? sessionData.user2_id : sessionData.user1_id
 
           if (otherUserId) {
-            // Fetch the other user's details
-            const userResponse = await fetch(`/api/users/${otherUserId}`)
+            // Fetch the other user's details by ID
+            const userResponse = await fetch(`/api/users/by-id/${otherUserId}`)
             if (userResponse.ok) {
               const userData = await userResponse.json()
               setMatchedUser({
@@ -146,6 +146,9 @@ export default function VideoCallContent() {
                 username: userData.username,
                 displayName: userData.displayName,
               })
+              console.log(`✅ Fetched matched user: ${userData.displayName}`)
+            } else {
+              console.error(`❌ Failed to fetch user ${otherUserId}:`, await userResponse.text())
             }
           }
         }
