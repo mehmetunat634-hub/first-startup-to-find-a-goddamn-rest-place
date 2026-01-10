@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { endVideoSession, deleteVideoSignals, getVideoSessionById } from '@/app/lib/db'
+import { endVideoSession, deleteVideoSignals, deleteSessionMessages, getVideoSessionById } from '@/app/lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,9 +18,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    // End the session and clean up signals
+    // End the session and clean up signals and messages
     endVideoSession(sessionId)
     deleteVideoSignals(sessionId)
+    deleteSessionMessages(sessionId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

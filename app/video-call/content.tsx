@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import SimplePeer, { Instance as PeerInstance } from 'simple-peer'
 import Navbar from '../components/Navbar'
+import ChatBar from './ChatBar'
 import { Phone, PhoneOff, SkipForward, UserPlus, Video, VideoOff, Loader } from 'lucide-react'
 
 interface RemoteUser {
@@ -25,6 +26,8 @@ export default function VideoCallContent() {
   const [callDuration, setCallDuration] = useState(0)
   const [isSearching, setIsSearching] = useState(false)
   const [videoEnabled, setVideoEnabled] = useState(true)
+  const [audioEnabled, setAudioEnabled] = useState(true)
+  const [initiator, setInitiator] = useState(false)
   const [caughtSessionId, setCaughtSessionId] = useState<string | null>(null)
 
   // Video and WebRTC refs
@@ -204,12 +207,12 @@ export default function VideoCallContent() {
   }, [isInCall])
 
   // Start WebRTC connection
-  const startWebRTCConnection = useCallback((remoteUserId: string) => {
+  const startWebRTCConnection = useCallback((remoteUserId: string, isInitiator: boolean) => {
     if (!localStreamRef.current || !sessionId) return
 
     // Create peer connection
     const peer = new SimplePeer({
-      initiator: userId < remoteUserId, // Deterministic initiator based on user IDs
+      initiator: isInitiator,
       trickle: true,
       streams: [localStreamRef.current],
       config: {
@@ -243,6 +246,14 @@ export default function VideoCallContent() {
 
     peer.on('error', (error: Error) => {
       console.error('WebRTC error:', error)
+    })
+
+    peer.on('connect', () => {
+      console.log('WebRTC Connected')
+    })
+
+    peer.on('close', () => {
+      console.log('WebRTC Closed')
     })
 
     peerRef.current = peer
@@ -290,10 +301,11 @@ export default function VideoCallContent() {
             username: data.otherUser.username,
             displayName: data.otherUser.displayName,
           })
+          setInitiator(data.initiator ?? false)
           setIsInCall(true)
           setIsSearching(false)
           if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
-          startWebRTCConnection(data.otherUser.id)
+          startWebRTCConnection(data.otherUser.id, data.initiator ?? false)
         }
       } catch (error) {
         console.error('Error checking match:', error)
@@ -308,9 +320,9 @@ export default function VideoCallContent() {
   // Start WebRTC connection when matched user is set (for caught sessions)
   useEffect(() => {
     if (matchedUser && sessionId && userId && isInCall && !peerRef.current) {
-      startWebRTCConnection(matchedUser.id)
+      startWebRTCConnection(matchedUser.id, initiator)
     }
-  }, [matchedUser, sessionId, userId, isInCall, startWebRTCConnection])
+  }, [matchedUser, sessionId, userId, isInCall, initiator, startWebRTCConnection])
 
   const handleSkip = async () => {
     if (!sessionId) return
@@ -384,6 +396,15 @@ export default function VideoCallContent() {
     }
   }
 
+  const toggleAudio = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled
+      })
+      setAudioEnabled(!audioEnabled)
+    }
+  }
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -454,65 +475,81 @@ export default function VideoCallContent() {
             </div>
           ) : (
             <div className="video-call-active">
-              {/* Remote User Video */}
-              <div className="video-call-remote">
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                {matchedUser && (
-                  <div className="remote-info-overlay">
-                    <h2>{matchedUser.displayName}</h2>
-                    <div className="status-indicator">
-                      <span className="status-dot"></span>
-                      Connected
-                    </div>
-                    {isInCall && (
-                      <div className="call-duration">
-                        {formatDuration(callDuration)}
+              <div className="video-call-main">
+                {/* Remote User Video */}
+                <div className="video-call-remote">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  {matchedUser && (
+                    <div className="remote-info-overlay">
+                      <h2>{matchedUser.displayName}</h2>
+                      <div className="status-indicator">
+                        <span className="status-dot"></span>
+                        Connected
                       </div>
-                    )}
-                  </div>
-                )}
+                      {isInCall && (
+                        <div className="call-duration">
+                          {formatDuration(callDuration)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Local User Video (small picture-in-picture) */}
+                <div className="video-call-local-pip">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
+                  />
+                </div>
+
+                {/* Call Controls */}
+                <div className="video-call-controls">
+                  <button
+                    className="control-button toggle"
+                    onClick={toggleAudio}
+                    title={audioEnabled ? 'Mute Audio' : 'Unmute Audio'}
+                  >
+                    {audioEnabled ? <Phone size={24} /> : <PhoneOff size={24} />}
+                  </button>
+                  <button
+                    className="control-button toggle"
+                    onClick={toggleVideo}
+                    title={videoEnabled ? 'Disable Video' : 'Enable Video'}
+                  >
+                    {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+                  </button>
+                  <button
+                    className="control-button decline"
+                    onClick={handleEndCall}
+                    title="End Call"
+                  >
+                    <PhoneOff size={24} />
+                  </button>
+                  <button
+                    className="control-button skip"
+                    onClick={handleSkip}
+                    title="Skip to Next"
+                  >
+                    <SkipForward size={24} />
+                  </button>
+                </div>
               </div>
 
-              {/* Local User Video (small picture-in-picture) */}
-              <div className="video-call-local-pip">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }}
-                />
-              </div>
-
-              {/* Call Controls */}
-              <div className="video-call-controls">
-                <button
-                  className="control-button toggle"
-                  onClick={toggleVideo}
-                  title={videoEnabled ? 'Disable Video' : 'Enable Video'}
-                >
-                  {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
-                </button>
-                <button
-                  className="control-button decline"
-                  onClick={handleEndCall}
-                  title="End Call"
-                >
-                  <PhoneOff size={24} />
-                </button>
-                <button
-                  className="control-button skip"
-                  onClick={handleSkip}
-                  title="Skip to Next"
-                >
-                  <SkipForward size={24} />
-                </button>
-              </div>
+              {/* Chat Bar */}
+              <ChatBar
+                sessionId={sessionId!}
+                userId={userId}
+                remoteUserDisplayName={matchedUser?.displayName || 'User'}
+              />
             </div>
           )}
         </div>

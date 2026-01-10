@@ -40,6 +40,19 @@ db.exec(`
     to_user_id TEXT NOT NULL,
     signal_type TEXT,
     signal_data TEXT,
+    processed BOOLEAN DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES video_sessions(id),
+    FOREIGN KEY (from_user_id) REFERENCES users(id),
+    FOREIGN KEY (to_user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    from_user_id TEXT NOT NULL,
+    to_user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES video_sessions(id),
     FOREIGN KEY (from_user_id) REFERENCES users(id),
@@ -303,6 +316,51 @@ export function getVideoSignalsForUser(sessionId: string, userId: string): Video
 
 export function deleteVideoSignals(sessionId: string): void {
   const stmt = db.prepare('DELETE FROM video_signals WHERE session_id = ?')
+  stmt.run(sessionId)
+}
+
+// Message functions
+export interface Message {
+  id: string
+  session_id: string
+  from_user_id: string
+  to_user_id: string
+  content: string
+  createdAt: string
+}
+
+export function createMessage(
+  sessionId: string,
+  fromUserId: string,
+  toUserId: string,
+  content: string
+): Message {
+  const id = Math.random().toString(36).substr(2, 12)
+  const stmt = db.prepare(`
+    INSERT INTO messages (id, session_id, from_user_id, to_user_id, content)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+  stmt.run(id, sessionId, fromUserId, toUserId, content)
+  return getMessageById(id)!
+}
+
+export function getMessageById(messageId: string): Message | null {
+  const stmt = db.prepare('SELECT * FROM messages WHERE id = ?')
+  return stmt.get(messageId) as Message | null
+}
+
+export function getMessagesForSession(sessionId: string, limit: number = 50): Message[] {
+  const stmt = db.prepare(`
+    SELECT * FROM messages
+    WHERE session_id = ?
+    ORDER BY createdAt ASC
+    LIMIT ?
+  `)
+  return stmt.all(sessionId, limit) as Message[]
+}
+
+export function deleteSessionMessages(sessionId: string): void {
+  const stmt = db.prepare('DELETE FROM messages WHERE session_id = ?')
   stmt.run(sessionId)
 }
 

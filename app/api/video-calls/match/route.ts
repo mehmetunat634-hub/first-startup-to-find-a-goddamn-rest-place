@@ -18,11 +18,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    // If already matched, return the other user's info
+    // If already matched, return the other user's info and initiator flag
     if (session.status === 'active' && session.user2_id) {
       const otherUserId = session.user1_id === userId ? session.user2_id : session.user1_id
       const otherUser = getUserById(otherUserId)
-      return NextResponse.json({ matched: true, otherUser })
+      const initiator = session.user1_id === userId // user1 is the initiator
+      return NextResponse.json({ matched: true, initiator, otherUser })
     }
 
     // If still waiting, look for other waiting sessions
@@ -32,7 +33,8 @@ export async function POST(request: NextRequest) {
         // Match with this session
         const matched = matchVideoSession(waitingSession.id, userId)
         const otherUser = getUserById(waitingSession.user1_id)
-        return NextResponse.json({ matched: true, sessionId: waitingSession.id, otherUser })
+        const initiator = false // Current user is user2 (joiner), so not initiator
+        return NextResponse.json({ matched: true, sessionId: waitingSession.id, initiator, otherUser })
       }
     }
 
