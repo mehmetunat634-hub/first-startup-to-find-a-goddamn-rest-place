@@ -46,10 +46,23 @@ export async function POST(
     const newUser1Status = user1_status || currentItem.user1_status
     const newUser2Status = user2_status || currentItem.user2_status
 
+    console.log(`Checking publish conditions:`, {
+      newUser1Status,
+      newUser2Status,
+      published_post_id: currentItem.published_post_id,
+      shouldPublish: newUser1Status === 'approved' && newUser2Status === 'approved' && !currentItem.published_post_id,
+    })
+
     if (newUser1Status === 'approved' && newUser2Status === 'approved' && !currentItem.published_post_id) {
       // Automatically publish the post
       try {
+        console.log(`Publishing pending item ${itemId} as post...`)
         const taggedUsers = JSON.stringify([currentItem.user1_id, currentItem.user2_id])
+        console.log(`Tagged users: ${taggedUsers}`)
+        console.log(`Recording path: ${currentItem.recording_path}`)
+        console.log(`Title: ${updatedItem.title || 'Untitled Recording'}`)
+        console.log(`Price: ${updatedItem.price || 0}`)
+
         const post = createPost(
           currentItem.user1_id, // userId - post owner
           updatedItem.title || 'Untitled Recording', // caption
@@ -63,6 +76,8 @@ export async function POST(
           (updatedItem.price || 0) * 0.5, // revenueSplitUser1 - 50%
           (updatedItem.price || 0) * 0.5  // revenueSplitUser2 - 50%
         )
+
+        console.log(`Created post with ID: ${post.id}`)
 
         // Update pending item with published_post_id
         updatePendingItem(itemId, {

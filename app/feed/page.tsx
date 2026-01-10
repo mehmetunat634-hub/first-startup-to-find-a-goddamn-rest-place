@@ -34,9 +34,28 @@ export default function FeedPage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [username, setUsername] = useState('')
+
+  const fetchPosts = async () => {
+    try {
+      const response = await fetch('/api/posts?limit=50&offset=0')
+      if (response.ok) {
+        const data = await response.json()
+        setPosts(data.posts)
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error)
+    }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchPosts()
+    setRefreshing(false)
+  }
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,21 +72,19 @@ export default function FeedPage() {
       }
 
       // Fetch posts
-      try {
-        const response = await fetch('/api/posts?limit=50&offset=0')
-        if (response.ok) {
-          const data = await response.json()
-          setPosts(data.posts)
-        }
-      } catch (error) {
-        console.error('Error fetching posts:', error)
-      }
-
+      await fetchPosts()
       setIsLoggedIn(true)
       setLoading(false)
     }
 
     checkAuth()
+
+    // Refetch posts every 5 seconds to catch newly published items
+    const interval = setInterval(() => {
+      fetchPosts()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [router])
 
   const handleLike = (postId: string) => {
@@ -128,6 +145,24 @@ export default function FeedPage() {
       <Navbar />
       <main className="home-main">
         <div className="feed-container">
+          <div style={{ padding: '10px', textAlign: 'center' }}>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#0095f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: refreshing ? 'not-allowed' : 'pointer',
+                opacity: refreshing ? 0.6 : 1,
+              }}
+            >
+              {refreshing ? 'Refreshing...' : '🔄 Refresh Feed'}
+            </button>
+          </div>
+
           {posts.length === 0 ? (
             <div className="feed-empty">
               <p>No posts yet. Start following users to see their posts!</p>
