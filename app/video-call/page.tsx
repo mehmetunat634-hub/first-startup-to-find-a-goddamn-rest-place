@@ -33,6 +33,33 @@ export default function VideoCallPage() {
   const matchPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const signalPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Handle find match - defined early to be used in auto-start effect
+  const handleFindMatch = useCallback(async () => {
+    if (!userId) {
+      alert('User not authenticated')
+      return
+    }
+
+    setIsSearching(true)
+
+    try {
+      const response = await fetch('/api/video-calls/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+
+      const data = await response.json()
+      if (data.session) {
+        setSessionId(data.session.id)
+      }
+    } catch (error) {
+      console.error('Error creating session:', error)
+      alert('Failed to start video call session')
+      setIsSearching(false)
+    }
+  }, [userId])
+
   // Initialize and get user info
   useEffect(() => {
     const checkAuth = async () => {
@@ -234,32 +261,6 @@ export default function VideoCallPage() {
       if (matchPollIntervalRef.current) clearInterval(matchPollIntervalRef.current)
     }
   }, [sessionId, isInCall, userId, startWebRTCConnection])
-
-  const handleFindMatch = useCallback(async () => {
-    if (!userId) {
-      alert('User not authenticated')
-      return
-    }
-
-    setIsSearching(true)
-
-    try {
-      const response = await fetch('/api/video-calls/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      })
-
-      const data = await response.json()
-      if (data.session) {
-        setSessionId(data.session.id)
-      }
-    } catch (error) {
-      console.error('Error creating session:', error)
-      alert('Failed to start video call session')
-      setIsSearching(false)
-    }
-  }, [userId])
 
   const handleSkip = async () => {
     if (!sessionId) return
