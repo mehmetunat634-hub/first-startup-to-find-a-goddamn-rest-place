@@ -13,6 +13,7 @@ export default function CatchVideoCallPage() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string>('')
   const [sessionId, setSessionId] = useState<string>('')
+  const [otherUserId, setOtherUserId] = useState<string>('')
   const [callStatus, setCallStatus] = useState<'connecting' | 'active' | 'ended'>('connecting')
   const [callDuration, setCallDuration] = useState(0)
 
@@ -39,6 +40,9 @@ export default function CatchVideoCallPage() {
 
       const sessionIdParam = params.sessionId as string
       setSessionId(sessionIdParam)
+
+      // Fetch session details to get the other user's ID (will be fetched after userId is set)
+      // This will be done in a separate effect below
 
       // Request camera access immediately
       try {
@@ -97,6 +101,28 @@ export default function CatchVideoCallPage() {
     }
   }, [router, params.sessionId])
 
+  // Fetch session details to get the other user's ID
+  useEffect(() => {
+    if (!userId || !sessionId) return
+
+    const fetchSessionDetails = async () => {
+      try {
+        const response = await fetch(`/api/video-calls/session/${sessionId}`)
+        if (response.ok) {
+          const sessionData = await response.json()
+          const otherUid = sessionData.user1_id === userId ? sessionData.user2_id : sessionData.user1_id
+          if (otherUid) {
+            setOtherUserId(otherUid)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching session details:', error)
+      }
+    }
+
+    fetchSessionDetails()
+  }, [userId, sessionId])
+
   // Start WebRTC connection
   useEffect(() => {
     if (!sessionId || !userId || !localStreamRef.current) return
@@ -124,15 +150,19 @@ export default function CatchVideoCallPage() {
       })
 
       peer.on('signal', (data) => {
-        fetch('/api/video-calls/signal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            signalType: data.type,
-            signalData: JSON.stringify(data),
-          }),
-        }).catch(console.error)
+        if (otherUserId) {
+          fetch('/api/video-calls/signal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              fromUserId: userId,
+              toUserId: otherUserId,
+              signalType: data.type,
+              signalData: JSON.stringify(data),
+            }),
+          }).catch(console.error)
+        }
       })
 
       peer.on('error', (err) => {
@@ -147,13 +177,14 @@ export default function CatchVideoCallPage() {
     // Poll for signals
     signalPollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch('/api/video-calls/signal', {
+        const response = await fetch(`/api/video-calls/signal?sessionId=${sessionId}&userId=${userId}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         })
 
         if (response.ok) {
-          const signals = await response.json()
+          const data = await response.json()
+          const signals = data.signals || []
           signals.forEach((signal: any) => {
             if (peerRef.current) {
               try {

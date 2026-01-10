@@ -15,6 +15,7 @@ export default function TargetedVideoCallPage() {
   const [username, setUsername] = useState<string>('')
   const [targetUsername, setTargetUsername] = useState<string>('')
   const [sessionId, setSessionId] = useState<string>('')
+  const [otherUserId, setOtherUserId] = useState<string>('')
   const [callStatus, setCallStatus] = useState<'waiting' | 'active' | 'ended'>('waiting')
   const [callDuration, setCallDuration] = useState(0)
 
@@ -136,6 +137,21 @@ export default function TargetedVideoCallPage() {
     }
 
     initializeCall()
+
+    // Fetch target user's ID
+    const fetchTargetUser = async () => {
+      try {
+        const response = await fetch(`/api/users/${targetUsername}`)
+        if (response.ok) {
+          const userData = await response.json()
+          setOtherUserId(userData.id)
+        }
+      } catch (error) {
+        console.error('Error fetching target user:', error)
+      }
+    }
+
+    fetchTargetUser()
   }, [userId, targetUsername, sessionId])
 
   // Poll for call match
@@ -195,15 +211,19 @@ export default function TargetedVideoCallPage() {
       })
 
       peer.on('signal', (data) => {
-        fetch('/api/video-calls/signal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            signalType: data.type,
-            signalData: JSON.stringify(data),
-          }),
-        }).catch(console.error)
+        if (otherUserId) {
+          fetch('/api/video-calls/signal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              fromUserId: userId,
+              toUserId: otherUserId,
+              signalType: data.type,
+              signalData: JSON.stringify(data),
+            }),
+          }).catch(console.error)
+        }
       })
 
       peer.on('error', (err) => {
@@ -218,13 +238,14 @@ export default function TargetedVideoCallPage() {
     // Poll for signals
     signalPollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch('/api/video-calls/signal', {
+        const response = await fetch(`/api/video-calls/signal?sessionId=${sessionId}&userId=${userId}`, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         })
 
         if (response.ok) {
-          const signals = await response.json()
+          const data = await response.json()
+          const signals = data.signals || []
           signals.forEach((signal: any) => {
             if (peerRef.current) {
               try {
