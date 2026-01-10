@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import PendingItemDetailModal from './PendingItemDetailModal'
 
 interface PendingItem {
   id: string
@@ -29,22 +30,24 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState<PendingItem | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [savingDetail, setSavingDetail] = useState(false)
+
+  const fetchPendingItems = async () => {
+    try {
+      const response = await fetch(`/api/video-calls/pending-items/user/${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPendingItems(data.pendingItems || [])
+      }
+    } catch (error) {
+      console.error('Error fetching pending items:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchPendingItems = async () => {
-      try {
-        const response = await fetch(`/api/video-calls/pending-items/user/${userId}`)
-        if (response.ok) {
-          const data = await response.json()
-          setPendingItems(data.pendingItems || [])
-        }
-      } catch (error) {
-        console.error('Error fetching pending items:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchPendingItems()
   }, [userId])
 
@@ -61,8 +64,10 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
     }
   }
 
-  const getStatusText = (user1Status: string, user2Status: string) => {
-    if (user1Status === 'approved' && user2Status === 'approved') {
+  const getStatusText = (user1Status: string, user2Status: string, publishedPostId?: string | null) => {
+    if (publishedPostId) {
+      return 'Published'
+    } else if (user1Status === 'approved' && user2Status === 'approved') {
       return 'Both Approved'
     } else if (user1Status === 'rejected' || user2Status === 'rejected') {
       return 'Rejected'
@@ -78,6 +83,52 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
       day: 'numeric',
       year: 'numeric',
     })
+  }
+
+  const handleOpenDetails = (item: PendingItem) => {
+    setSelectedItem(item)
+    setShowDetailModal(true)
+  }
+
+  const handleCloseDetails = () => {
+    setShowDetailModal(false)
+    setSelectedItem(null)
+    // Refetch pending items to show updated statuses and publishing status
+    fetchPendingItems()
+  }
+
+  const handleSaveDetails = async (data: { title: string; description: string; price: number }) => {
+    if (!selectedItem) return
+
+    setSavingDetail(true)
+    try {
+      const response = await fetch(`/api/video-calls/pending-items/${selectedItem.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          price: data.price,
+          user1_status: 'approved',
+        }),
+      })
+
+      if (response.ok) {
+        const updatedItem = await response.json()
+        // Update the pending item in the list
+        setPendingItems(
+          pendingItems.map((item) => (item.id === selectedItem.id ? updatedItem.pendingItem : item))
+        )
+        handleCloseDetails()
+      } else {
+        throw new Error('Failed to update pending item')
+      }
+    } catch (error) {
+      console.error('Error saving pending item details:', error)
+      throw error
+    } finally {
+      setSavingDetail(false)
+    }
   }
 
   if (loading) {
@@ -116,15 +167,14 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
             <div
               key={item.id}
               className="pending-item-card"
-              onClick={() => setSelectedItem(item)}
             >
               <div className="pending-item-header">
                 <h3 className="pending-item-title">
                   {item.title || 'Untitled Recording'}
                 </h3>
                 <div className="pending-item-status">
-                  {getStatusIcon(userStatus)}
-                  <span className="status-text">{getStatusText(item.user1_status, item.user2_status)}</span>
+                  {getStatusIcon(item.published_post_id ? 'approved' : userStatus)}
+                  <span className="status-text">{getStatusText(item.user1_status, item.user2_status, item.published_post_id)}</span>
                 </div>
               </div>
 
@@ -160,13 +210,35 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
                 </div>
               </div>
 
-              <button className="pending-item-action">
-                {userStatus === 'pending' ? 'Complete Details' : 'View Details'}
-              </button>
+              {item.published_post_id ? (
+                <button
+                  className="pending-item-action"
+                  disabled
+                >
+                  ✅ Published
+                </button>
+              ) : (
+                <button
+                  className="pending-item-action"
+                  onClick={() => handleOpenDetails(item)}
+                >
+                  {isUser1 && userStatus === 'pending' ? 'Complete Details' : 'View Details'}
+                </button>
+              )}
             </div>
           )
         })}
       </div>
+
+      {selectedItem && (
+        <PendingItemDetailModal
+          isOpen={showDetailModal}
+          item={selectedItem}
+          currentUserId={userId}
+          onClose={handleCloseDetails}
+          onSave={handleSaveDetails}
+        />
+      )}
     </section>
   )
 }
