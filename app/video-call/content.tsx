@@ -35,9 +35,16 @@ export default function VideoCallContent() {
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const peerRef = useRef<PeerInstance | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const remoteStreamRef = useRef<MediaStream | null>(null)
   const matchPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const signalPollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+
+  // Recording refs
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
+  const recordingStartTimeRef = useRef<number | null>(null)
 
   // Handle find match - defined early to be used in auto-start effect
   const handleFindMatch = useCallback(async () => {
@@ -65,6 +72,139 @@ export default function VideoCallContent() {
       setIsSearching(false)
     }
   }, [userId])
+
+  // Start recording both video streams and audio
+  const startRecording = useCallback(async () => {
+    try {
+      if (!localVideoRef.current || !remoteVideoRef.current || !canvasRef.current) {
+        console.log('⚠️ Video elements or canvas not ready for recording')
+        return
+      }
+
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      // Set canvas size
+      canvas.width = 1280
+      canvas.height = 720
+
+      // Combine audio tracks from both streams
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const audioDestination = audioContext.createMediaStreamDestination()
+
+      // Add local audio
+      if (localStreamRef.current) {
+        const localAudioTrack = localStreamRef.current.getAudioTracks()[0]
+        if (localAudioTrack) {
+          const localAudioSource = audioContext.createMediaStreamSource(localStreamRef.current)
+          localAudioSource.connect(audioDestination)
+        }
+      }
+
+      // Add remote audio
+      if (remoteStreamRef.current) {
+        const remoteAudioTrack = remoteStreamRef.current.getAudioTracks()[0]
+        if (remoteAudioTrack) {
+          const remoteAudioSource = audioContext.createMediaStreamSource(remoteStreamRef.current)
+          remoteAudioSource.connect(audioDestination)
+        }
+      }
+
+      // Create canvas stream
+      const canvasStream = canvas.captureStream(30) // 30 FPS
+      // Add combined audio to canvas stream
+      audioDestination.stream.getAudioTracks().forEach(track => {
+        canvasStream.addTrack(track)
+      })
+
+      // Create MediaRecorder
+      const options: MediaRecorderOptions = {
+        mimeType: 'video/webm;codecs=vp9,opus',
+      }
+
+      // Fallback to vp8 if vp9 not supported
+      if (options.mimeType && !MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm;codecs=vp8,opus'
+      }
+
+      // Fallback to default if neither supported
+      if (options.mimeType && !MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm'
+      }
+
+      const mediaRecorder = new MediaRecorder(canvasStream, options)
+      mediaRecorderRef.current = mediaRecorder
+      recordedChunksRef.current = []
+      recordingStartTimeRef.current = Date.now()
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onerror = (event) => {
+        console.error('Recording error:', event.error)
+      }
+
+      mediaRecorder.start()
+      console.log('🎬 Recording started')
+    } catch (error) {
+      console.error('Error starting recording:', error)
+    }
+  }, [])
+
+  // Stop recording and save
+  const stopRecording = useCallback(async () => {
+    return new Promise<string | null>(async (resolve) => {
+      if (!mediaRecorderRef.current || !sessionId) {
+        resolve(null)
+        return
+      }
+
+      const mediaRecorder = mediaRecorderRef.current
+
+      mediaRecorder.onstop = async () => {
+        try {
+          const recordingDuration = recordingStartTimeRef.current
+            ? Math.floor((Date.now() - recordingStartTimeRef.current) / 1000)
+            : 0
+
+          const blob = new Blob(recordedChunksRef.current, { type: mediaRecorder.mimeType || 'video/webm' })
+          const fileSize = blob.size
+
+          // Upload recording to server
+          const formData = new FormData()
+          formData.append('file', blob, `recording-${sessionId}.webm`)
+          formData.append('sessionId', sessionId)
+          formData.append('duration', recordingDuration.toString())
+
+          const response = await fetch('/api/video-calls/upload-recording', {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            console.log('🎬 Recording saved:', data.recordingPath)
+            resolve(data.recordingPath)
+          } else {
+            console.error('Failed to upload recording')
+            resolve(null)
+          }
+        } catch (error) {
+          console.error('Error saving recording:', error)
+          resolve(null)
+        }
+      }
+
+      mediaRecorder.stop()
+      mediaRecorderRef.current = null
+      recordedChunksRef.current = []
+      recordingStartTimeRef.current = null
+    })
+  }, [sessionId])
 
   // Sync sessionId to ref for cleanup access
   useEffect(() => {
@@ -250,6 +390,12 @@ export default function VideoCallContent() {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream
       }
+      // Capture remote stream for recording
+      remoteStreamRef.current = stream
+      // Start recording once both streams are available
+      if (localStreamRef.current && stream && !mediaRecorderRef.current) {
+        startRecording()
+      }
     })
 
     peer.on('signal', (data: any) => {
@@ -381,7 +527,10 @@ export default function VideoCallContent() {
   }, [matchedUser, sessionId, userId, isInCall, initiator, startWebRTCConnection])
 
   const handleSkip = async () => {
-    if (!sessionId) return
+    if (!sessionId || !matchedUser) return
+
+    // Stop recording and get recording path
+    const recordingPath = await stopRecording()
 
     // End current session
     try {
@@ -392,6 +541,25 @@ export default function VideoCallContent() {
       })
     } catch (error) {
       console.error('Error ending session:', error)
+    }
+
+    // Create pending item if recording was successful
+    if (recordingPath) {
+      try {
+        await fetch('/api/video-calls/pending-items/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            recordingPath,
+            user1Id: userId,
+            user2Id: matchedUser.id,
+          }),
+        })
+        console.log('📋 Pending item created for recording')
+      } catch (error) {
+        console.error('Error creating pending item:', error)
+      }
     }
 
     // Reset state and find new match
@@ -420,6 +588,9 @@ export default function VideoCallContent() {
   const handleEndCall = async () => {
     if (!sessionId) return
 
+    // Stop recording and get recording path
+    const recordingPath = await stopRecording()
+
     try {
       await fetch('/api/video-calls/end', {
         method: 'POST',
@@ -428,6 +599,25 @@ export default function VideoCallContent() {
       })
     } catch (error) {
       console.error('Error ending session:', error)
+    }
+
+    // Create pending item if recording was successful
+    if (recordingPath && matchedUser) {
+      try {
+        await fetch('/api/video-calls/pending-items/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            recordingPath,
+            user1Id: userId,
+            user2Id: matchedUser.id,
+          }),
+        })
+        console.log('📋 Pending item created for recording')
+      } catch (error) {
+        console.error('Error creating pending item:', error)
+      }
     }
 
     // Cleanup
@@ -494,6 +684,11 @@ export default function VideoCallContent() {
 
   return (
     <div className="home-container">
+      {/* Hidden canvas for recording both video streams */}
+      <canvas
+        ref={canvasRef}
+        style={{ display: 'none' }}
+      />
       <Navbar />
       <main className="home-main">
         <div className="video-call-container">
