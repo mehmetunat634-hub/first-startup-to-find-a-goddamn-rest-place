@@ -3,25 +3,29 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Navbar from '../components/Navbar'
-import { Video, User } from 'lucide-react'
+import { Flower, ArrowRight } from 'lucide-react'
 
-interface UserCard {
-  id: string
-  username: string
-  displayName: string
-  firstName: string
-  lastName: string
-  bio: string
+interface WaitingUser {
+  sessionId: string
+  user: {
+    id: string
+    username: string
+    displayName: string
+    firstName: string
+    lastName: string
+    bio: string
+  }
+  createdAt: string
 }
 
 export default function ExplorePage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [users, setUsers] = useState<UserCard[]>([])
+  const [waitingUsers, setWaitingUsers] = useState<WaitingUser[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [currentUsername, setCurrentUsername] = useState<string>('')
-  const [callingSessions, setCallingSessions] = useState<Set<string>>(new Set())
+  const [catchingSession, setCatchingSession] = useState<string | null>(null)
 
   useEffect(() => {
     // Check if user is logged in
@@ -40,60 +44,54 @@ export default function ExplorePage() {
 
     setIsLoggedIn(true)
 
-    // Fetch all users
-    const fetchUsers = async () => {
+    // Fetch waiting sessions
+    const fetchWaitingUsers = async () => {
       try {
-        const response = await fetch('/api/users')
+        const response = await fetch('/api/video-calls/waiting')
         if (response.ok) {
           const data = await response.json()
-          // Filter out the current user
-          const filteredUsers = data.filter(
-            (user: UserCard) => user.username !== currentUsername
+          // Filter out own session if exists
+          const filtered = data.filter(
+            (session: WaitingUser) => session.user.username !== currentUsername
           )
-          setUsers(filteredUsers)
+          setWaitingUsers(filtered)
         }
       } catch (error) {
-        console.error('Error fetching users:', error)
+        console.error('Error fetching waiting sessions:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    if (currentUsername) {
-      fetchUsers()
-    }
+    // Fetch immediately and then poll every 3 seconds
+    fetchWaitingUsers()
+    const interval = setInterval(fetchWaitingUsers, 3000)
+
+    return () => clearInterval(interval)
   }, [router, currentUsername])
 
-  const handleVideoCallQuery = async (targetUsername: string) => {
+  const handleCatch = async (sessionId: string, targetUsername: string) => {
     try {
-      setCallingSessions((prev) => new Set(prev).add(targetUsername))
+      setCatchingSession(sessionId)
 
-      const response = await fetch(`/api/video-calls/to/${targetUsername}`, {
+      const response = await fetch('/api/video-calls/catch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUserId }),
+        body: JSON.stringify({ sessionId, userId: currentUserId }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        // Navigate to the video call page with the target username
-        router.push(`/video/to/${targetUsername}`)
+        // Navigate to the active call page
+        router.push(`/video/catch/${sessionId}`)
       } else {
-        setCallingSessions((prev) => {
-          const newSet = new Set(prev)
-          newSet.delete(targetUsername)
-          return newSet
-        })
-        alert('Failed to initiate video call')
+        setCatchingSession(null)
+        alert('Someone caught them first! Try another one.')
       }
     } catch (error) {
-      console.error('Error initiating video call:', error)
-      setCallingSessions((prev) => {
-        const newSet = new Set(prev)
-        newSet.delete(targetUsername)
-        return newSet
-      })
-      alert('Error initiating video call')
+      console.error('Error catching session:', error)
+      setCatchingSession(null)
+      alert('Error catching session')
     }
   }
 
@@ -102,7 +100,7 @@ export default function ExplorePage() {
       <div className="home-container">
         <Navbar />
         <main className="home-main">
-          <div className="explore-loading">Loading users...</div>
+          <div className="explore-loading">Loading catching board...</div>
         </main>
       </div>
     )
@@ -114,52 +112,64 @@ export default function ExplorePage() {
       <main className="home-main">
         <div className="explore-container">
           <div className="explore-header">
-            <h1>Explore & Connect</h1>
-            <p>Browse and select who you want to call</p>
+            <h1>🌹 Catch The Flower 🌹</h1>
+            <p>People are waiting! Catch them before someone else does</p>
           </div>
 
-          {users.length === 0 ? (
+          {waitingUsers.length === 0 ? (
             <div className="no-users-message">
-              <p>No users available at the moment</p>
+              <div className="empty-state">
+                <Flower size={48} />
+                <p>No flowers being thrown right now...</p>
+                <p className="small-text">Go to Video Call to throw your flower!</p>
+              </div>
             </div>
           ) : (
-            <div className="users-grid">
-              {users.map((user) => (
-                <div key={user.id} className="user-card">
-                  <div className="user-card-header">
-                    <div className="user-avatar">{user.displayName.charAt(0)}</div>
-                    <div className="user-info">
-                      <h3 className="user-display-name">{user.displayName}</h3>
-                      <p className="user-username">@{user.username}</p>
-                    </div>
-                  </div>
+            <div className="catch-grid">
+              {waitingUsers.map((waiting) => (
+                <div key={waiting.sessionId} className="catch-card">
+                  <div className="flower-indicator">🌹</div>
 
-                  <div className="user-card-body">
-                    <p className="user-bio">{user.bio}</p>
-                    <div className="user-meta">
-                      <span className="user-name">
-                        {user.firstName} {user.lastName}
-                      </span>
+                  <div className="catch-card-content">
+                    <div className="catch-card-header">
+                      <div className="user-avatar">
+                        {waiting.user.displayName.charAt(0)}
+                      </div>
+                      <div className="user-info">
+                        <h3 className="user-display-name">
+                          {waiting.user.displayName}
+                        </h3>
+                        <p className="user-username">@{waiting.user.username}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="user-card-actions">
+                    <div className="catch-card-body">
+                      <p className="user-bio">{waiting.user.bio}</p>
+                      <div className="waiting-badge">
+                        <div className="pulse"></div>
+                        Waiting to be caught...
+                      </div>
+                    </div>
+
                     <button
-                      className="call-button"
-                      onClick={() => handleVideoCallQuery(user.username)}
-                      disabled={callingSessions.has(user.username)}
+                      className="catch-button"
+                      onClick={() =>
+                        handleCatch(waiting.sessionId, waiting.user.username)
+                      }
+                      disabled={catchingSession === waiting.sessionId}
                     >
-                      <Video size={18} />
-                      {callingSessions.has(user.username)
-                        ? 'Calling...'
-                        : 'Start Video Call'}
-                    </button>
-                    <button
-                      className="profile-button"
-                      onClick={() => router.push(`/profile/${user.username}`)}
-                    >
-                      <User size={18} />
-                      Profile
+                      {catchingSession === waiting.sessionId ? (
+                        <>
+                          <div className="catching-spinner"></div>
+                          Catching...
+                        </>
+                      ) : (
+                        <>
+                          <Flower size={18} />
+                          Catch Now
+                          <ArrowRight size={18} />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -171,3 +181,4 @@ export default function ExplorePage() {
     </div>
   )
 }
+

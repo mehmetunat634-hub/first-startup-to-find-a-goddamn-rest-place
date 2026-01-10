@@ -247,6 +247,15 @@ export function findSessionWithTargetUser(fromUserId: string, toUserId: string):
   return stmt.get(fromUserId, toUserId, toUserId, fromUserId) as VideoSession | null
 }
 
+export function getAllWaitingSessions(): VideoSession[] {
+  const stmt = db.prepare(`
+    SELECT * FROM video_sessions
+    WHERE status = 'waiting'
+    ORDER BY createdAt DESC
+  `)
+  return stmt.all() as VideoSession[]
+}
+
 export function matchVideoSession(sessionId: string, userId: string): VideoSession | null {
   const stmt = db.prepare(`
     UPDATE video_sessions
