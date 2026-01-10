@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Home, Compass, Settings, LogOut, User } from 'lucide-react'
+import { Newspaper, Compass, Settings, LogOut, User } from 'lucide-react'
 
 export default function Navbar() {
   const router = useRouter()
   const [username, setUsername] = useState('')
+  const [isPro, setIsPro] = useState(false)
 
   // Get username from localStorage on mount
   useEffect(() => {
@@ -14,6 +15,9 @@ export default function Navbar() {
     if (user) {
       const userData = JSON.parse(user)
       setUsername(userData.username)
+      // Mock pro status - check if username exists in pro list or random
+      const proUsers = ['mehmetunat634', 'john', 'jane']
+      setIsPro(proUsers.includes(userData.username.toLowerCase()))
     }
   }, [])
 
@@ -29,8 +33,16 @@ export default function Navbar() {
 
   const handleProfileClick = () => {
     if (username) {
-      router.push(`/profile/@${username}`)
+      router.push(`/profile/${username}`)
     }
+  }
+
+  const handleFeed = () => {
+    router.push('/feed')
+  }
+
+  const handleExplore = () => {
+    router.push('/explore')
   }
 
   return (
@@ -39,14 +51,14 @@ export default function Navbar() {
         <div className="navbar-logo">instagram</div>
 
         <div className="navbar-links">
-          <a href="#" className="navbar-link">
-            <Home className="navbar-link-icon" size={24} />
-            <span className="navbar-link-text">Feed</span>
-          </a>
-          <a href="#" className="navbar-link">
+          <button className="navbar-link" onClick={handleExplore}>
             <Compass className="navbar-link-icon" size={24} />
             <span className="navbar-link-text">Explore</span>
-          </a>
+          </button>
+          <button className="navbar-link" onClick={handleFeed}>
+            <Newspaper className="navbar-link-icon" size={24} />
+            <span className="navbar-link-text">Feed</span>
+          </button>
         </div>
       </div>
 
@@ -56,7 +68,10 @@ export default function Navbar() {
         </div>
         <div className="profile-info">
           <div className="profile-greeting">Hello</div>
-          <div className="profile-username">{username}</div>
+          <div className="profile-username-row">
+            <span className="profile-username">{username}</span>
+            {isPro && <span className="pro-badge">Pro</span>}
+          </div>
         </div>
       </button>
 

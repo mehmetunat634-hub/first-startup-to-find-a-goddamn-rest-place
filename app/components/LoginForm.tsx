@@ -35,8 +35,6 @@ export default function LoginForm() {
 
     if (!formData.email.trim()) {
       newErrors.email = 'Email or username is required'
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email address'
     }
 
     if (!formData.password) {
@@ -75,17 +73,30 @@ export default function LoginForm() {
     setIsLoading(true)
 
     try {
-      // Simulate API call with a delay
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Call login API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.email, // Can be username or email
+          password: formData.password,
+        }),
+      })
 
-      // Mock authentication - in a real app, this would be an API call
-      const mockUser = {
-        email: formData.email,
-        username: formData.email.split('@')[0],
+      if (!response.ok) {
+        const errorData = await response.json()
+        setErrors({
+          general: errorData.error || 'Login failed. Please check your credentials.',
+        })
+        return
       }
 
-      // Store user in localStorage (for demo purposes)
-      localStorage.setItem('user', JSON.stringify(mockUser))
+      const user = await response.json()
+
+      // Store user in localStorage
+      localStorage.setItem('user', JSON.stringify(user))
       localStorage.setItem('isLoggedIn', 'true')
 
       setSuccessMessage('Login successful! Redirecting...')
@@ -96,6 +107,7 @@ export default function LoginForm() {
         router.push('/home')
       }, 1000)
     } catch (error) {
+      console.error('Login error:', error)
       setErrors({
         general: 'An error occurred during login. Please try again.',
       })
@@ -133,7 +145,7 @@ export default function LoginForm() {
       <div className="form-group">
         <label htmlFor="email">Email or username</label>
         <input
-          type="email"
+          type="text"
           id="email"
           name="email"
           placeholder="Phone number, username, or email"
@@ -186,7 +198,7 @@ export default function LoginForm() {
       </div>
 
       <div className="signup-prompt">
-        Don't have an account? <a href="#">Sign up</a>
+        Don&apos;t have an account? <a href="/register">Sign up</a>
       </div>
     </form>
   )

@@ -9,6 +9,10 @@ interface UserProfile {
   username: string
   email: string
   displayName: string
+  firstName: string
+  lastName: string
+  avatar: string
+  bio: string
 }
 
 export default function SettingsPage() {
@@ -32,14 +36,18 @@ export default function SettingsPage() {
     }
     setIsLoggedIn(true)
 
-    // Get user data
+    // Fetch user data from localStorage and API
     const userData = localStorage.getItem('user')
     if (userData) {
       const parsed = JSON.parse(userData)
       setUser({
         username: parsed.username,
         email: parsed.email || `${parsed.username}@instagram.com`,
-        displayName: parsed.username.charAt(0).toUpperCase() + parsed.username.slice(1),
+        displayName: parsed.displayName || parsed.username.charAt(0).toUpperCase() + parsed.username.slice(1),
+        firstName: parsed.firstName || parsed.displayName || parsed.username.charAt(0).toUpperCase() + parsed.username.slice(1),
+        lastName: parsed.lastName || 'User',
+        avatar: parsed.username.charAt(0).toUpperCase(),
+        bio: parsed.bio || 'Instagram user',
       })
     }
 
@@ -76,7 +84,38 @@ export default function SettingsPage() {
   }
 
   const handleUsernameClick = () => {
-    router.push(`/profile/@${user.username}`)
+    router.push(`/profile/${user.username}`)
+  }
+
+  const handleSaveChanges = async () => {
+    if (!user) return
+
+    try {
+      const response = await fetch(`/api/users/${user.username}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          displayName: user.displayName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          bio: user.bio,
+        }),
+      })
+
+      if (!response.ok) {
+        alert('Failed to save changes')
+        return
+      }
+
+      const updatedUser = await response.json()
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      alert('Settings saved successfully!')
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      alert('An error occurred while saving settings')
+    }
   }
 
   return (
@@ -100,28 +139,66 @@ export default function SettingsPage() {
             {/* User Info Section */}
             <div className="settings-section">
               <h3 className="settings-section-title">Account Information</h3>
-              <div className="settings-user-info">
-                <div className="settings-user-item">
-                  <span className="settings-label">Display Name</span>
-                  <button
-                    className="settings-user-link"
-                    onClick={handleUsernameClick}
-                  >
-                    {user.displayName}
-                  </button>
+              <div className="settings-user-profile">
+                <div className="settings-avatar-section">
+                  <div className="settings-avatar-large">
+                    {user.avatar}
+                  </div>
+                </div>
+                <div className="settings-user-info">
+                  <div className="settings-user-item">
+                    <span className="settings-label">Display Name</span>
+                    <button
+                      className="settings-user-link"
+                      onClick={handleUsernameClick}
+                    >
+                      {user.displayName}
+                    </button>
+                  </div>
+                  <div className="settings-user-item">
+                    <span className="settings-label">Username</span>
+                    <button
+                      className="settings-user-link"
+                      onClick={handleUsernameClick}
+                    >
+                      @{user.username}
+                    </button>
+                  </div>
+                  <div className="settings-user-item">
+                    <span className="settings-label">Email</span>
+                    <span className="settings-value">{user.email}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="settings-user-details">
+                <div className="settings-details-row">
+                  <div className="settings-user-item">
+                    <span className="settings-label">First Name</span>
+                    <input
+                      type="text"
+                      value={user.firstName}
+                      onChange={(e) => setUser({ ...user, firstName: e.target.value })}
+                      className="settings-input"
+                    />
+                  </div>
+                  <div className="settings-user-item">
+                    <span className="settings-label">Last Name</span>
+                    <input
+                      type="text"
+                      value={user.lastName}
+                      onChange={(e) => setUser({ ...user, lastName: e.target.value })}
+                      className="settings-input"
+                    />
+                  </div>
                 </div>
                 <div className="settings-user-item">
-                  <span className="settings-label">Username</span>
-                  <button
-                    className="settings-user-link"
-                    onClick={handleUsernameClick}
-                  >
-                    @{user.username}
-                  </button>
-                </div>
-                <div className="settings-user-item">
-                  <span className="settings-label">Email</span>
-                  <span className="settings-value">{user.email}</span>
+                  <span className="settings-label">Bio</span>
+                  <textarea
+                    value={user.bio}
+                    onChange={(e) => setUser({ ...user, bio: e.target.value })}
+                    className="settings-textarea"
+                    rows={3}
+                  />
                 </div>
               </div>
             </div>
@@ -225,7 +302,9 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="settings-actions">
-              <button className="action-button primary">Save Changes</button>
+              <button className="action-button primary" onClick={handleSaveChanges}>
+                Save Changes
+              </button>
             </div>
           </div>
         </div>
