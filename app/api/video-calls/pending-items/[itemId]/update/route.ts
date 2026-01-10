@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { updatePendingItem, getPendingItemById, createPost } from '@/app/lib/db'
+import { updatePendingItem, getPendingItemById, createPost, getUserById } from '@/app/lib/db'
 
 export async function POST(
   request: NextRequest,
@@ -58,7 +58,15 @@ export async function POST(
       // Automatically publish the post
       try {
         console.log(`Publishing pending item ${itemId} as post...`)
-        const taggedUsers = JSON.stringify([currentItem.user1_id, currentItem.user2_id])
+
+        // Get usernames from user IDs
+        const user1 = getUserById(currentItem.user1_id)
+        const user2 = getUserById(currentItem.user2_id)
+
+        const user1Username = user1?.username || currentItem.user1_id
+        const user2Username = user2?.username || currentItem.user2_id
+
+        const taggedUsers = JSON.stringify([user1Username, user2Username])
         console.log(`Tagged users: ${taggedUsers}`)
         console.log(`Recording path: ${currentItem.recording_path}`)
         console.log(`Title: ${updatedItem.title || 'Untitled Recording'}`)
@@ -70,7 +78,7 @@ export async function POST(
           currentItem.recording_path, // videoUrl
           undefined, // thumbnailUrl
           updatedItem.price || 0, // price
-          taggedUsers, // taggedUsers
+          taggedUsers, // taggedUsers (now contains usernames)
           currentItem.session_id, // recordingSessionId
           true, // approvedByUser1
           true, // approvedByUser2
