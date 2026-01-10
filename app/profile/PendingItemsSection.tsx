@@ -13,6 +13,7 @@ interface PendingItem {
   title: string | null
   description: string | null
   price: number | null
+  categoryTags: string
   user1_status: 'pending' | 'approved' | 'rejected'
   user2_status: 'pending' | 'approved' | 'rejected'
   publish_platform: string | null
@@ -97,7 +98,7 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
     fetchPendingItems()
   }
 
-  const handleSaveDetails = async (data: { title: string; description: string; price: number }) => {
+  const handleSaveDetails = async (data: { title: string; description: string; price: number; categoryTags: string }) => {
     if (!selectedItem) return
 
     setSavingDetail(true)
@@ -109,6 +110,7 @@ export default function PendingItemsSection({ userId, username }: PendingItemsSe
           title: data.title,
           description: data.description,
           price: data.price,
+          categoryTags: data.categoryTags,
           user1_status: 'approved',
         }),
       })

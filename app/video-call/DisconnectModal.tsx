@@ -7,7 +7,7 @@ interface DisconnectModalProps {
   isOpen: boolean
   pendingItemId: string
   onClose: () => void
-  onSave: (data: { title: string; description: string; price: number }) => Promise<void>
+  onSave: (data: { title: string; description: string; price: number; categoryTags: string }) => Promise<void>
 }
 
 export default function DisconnectModal({
@@ -19,6 +19,7 @@ export default function DisconnectModal({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
+  const [categoryTags, setCategoryTags] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -40,17 +41,26 @@ export default function DisconnectModal({
       return
     }
 
+    // Parse category tags (split by comma and clean)
+    const tags = categoryTags
+      .split(',')
+      .map(tag => tag.trim().toLowerCase().replace(/^#/, ''))
+      .filter(tag => tag.length > 0)
+    const tagsJson = JSON.stringify(tags)
+
     setSaving(true)
     try {
       await onSave({
         title: title.trim(),
         description: description.trim(),
         price: Number(price),
+        categoryTags: tagsJson,
       })
       // Reset form on success
       setTitle('')
       setDescription('')
       setPrice('')
+      setCategoryTags('')
     } catch (err) {
       setError('Failed to save. Please try again.')
     } finally {
@@ -105,6 +115,22 @@ export default function DisconnectModal({
               maxLength={500}
             />
             <small className="form-help">{description.length}/500</small>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="categoryTags">Category Tags (Optional)</label>
+            <input
+              id="categoryTags"
+              type="text"
+              placeholder="e.g., gaming, entertainment, tutorial"
+              value={categoryTags}
+              onChange={(e) => setCategoryTags(e.target.value)}
+              className="form-input"
+              maxLength={200}
+            />
+            <small className="form-help">
+              Enter tags separated by commas (e.g., #gaming, #tutorial). These help users find your content.
+            </small>
           </div>
 
           <div className="form-group">

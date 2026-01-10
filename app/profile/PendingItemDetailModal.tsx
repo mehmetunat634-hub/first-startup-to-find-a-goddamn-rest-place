@@ -10,6 +10,7 @@ interface PendingItemDetailModalProps {
     title: string | null
     description: string | null
     price: number | null
+    categoryTags: string
     user1_id: string
     user2_id: string
     user1_status: 'pending' | 'approved' | 'rejected'
@@ -17,7 +18,7 @@ interface PendingItemDetailModalProps {
   }
   currentUserId: string
   onClose: () => void
-  onSave: (data: { title: string; description: string; price: number }) => Promise<void>
+  onSave: (data: { title: string; description: string; price: number; categoryTags: string }) => Promise<void>
 }
 
 export default function PendingItemDetailModal({
@@ -34,6 +35,14 @@ export default function PendingItemDetailModal({
   const [title, setTitle] = useState(item.title || '')
   const [description, setDescription] = useState(item.description || '')
   const [price, setPrice] = useState(item.price?.toString() || '')
+  const [categoryTags, setCategoryTags] = useState(() => {
+    try {
+      const tags = JSON.parse(item.categoryTags || '[]')
+      return tags.join(', ')
+    } catch {
+      return ''
+    }
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -57,10 +66,18 @@ export default function PendingItemDetailModal({
 
     setSaving(true)
     try {
+      // Parse category tags
+      const tags = categoryTags
+        .split(',')
+        .map((tag: string) => tag.trim().toLowerCase().replace(/^#/, ''))
+        .filter((tag: string) => tag.length > 0)
+      const tagsJson = JSON.stringify(tags)
+
       await onSave({
         title: title.trim(),
         description: description.trim(),
         price: Number(price),
+        categoryTags: tagsJson,
       })
       onClose()
     } catch (err) {
@@ -160,6 +177,23 @@ export default function PendingItemDetailModal({
               disabled={!canEdit}
             />
             <small className="form-help">{description.length}/500</small>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="categoryTags">Category Tags (Optional)</label>
+            <input
+              id="categoryTags"
+              type="text"
+              placeholder="e.g., gaming, entertainment, tutorial"
+              value={categoryTags}
+              onChange={(e) => setCategoryTags(e.target.value)}
+              className="form-input"
+              maxLength={200}
+              disabled={!canEdit}
+            />
+            <small className="form-help">
+              Enter tags separated by commas (e.g., #gaming, #tutorial). Users can find your content by these tags.
+            </small>
           </div>
 
           <div className="form-group">

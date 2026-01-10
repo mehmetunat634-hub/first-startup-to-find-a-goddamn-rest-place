@@ -3028,6 +3028,48 @@ body {
   border-color: #667eea;
 }
 
+/* Category Tags */
+.post-category-tags {
+  padding: 0.5rem 1rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.category-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #262626;
+}
+
+.category-tags-list {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.category-tag-link {
+  background: none;
+  border: 1px solid #ffa500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 16px;
+  color: #ff6b35;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-tag-link:hover {
+  background: #ff6b35;
+  color: white;
+  border-color: #ff6b35;
+}
+
 /* Post Comments Section */
 .post-comments-section {
   padding: 0.5rem 1rem 1rem;

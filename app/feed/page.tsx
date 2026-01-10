@@ -23,6 +23,7 @@ interface FeedPost {
   thumbnailUrl: string | null
   price?: number
   taggedUsers: string
+  categoryTags: string
   likes: number
   comments: number
   createdAt: string
@@ -272,6 +273,33 @@ export default function FeedPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Category Tags */}
+                  {(() => {
+                    try {
+                      const tags = JSON.parse(post.categoryTags)
+                      return tags.length > 0 ? (
+                        <div className="post-category-tags">
+                          <p className="category-label">#️⃣ Categories: </p>
+                          <div className="category-tags-list">
+                            {tags.map((tag: string) => (
+                              <button
+                                key={tag}
+                                className="category-tag-link"
+                                onClick={() => {
+                                  // TODO: Implement tag search/filter
+                                }}
+                              >
+                                #{tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null
+                    } catch {
+                      return null
+                    }
+                  })()}
 
                   {/* Post Comments Section */}
                   <div className="post-comments-section">

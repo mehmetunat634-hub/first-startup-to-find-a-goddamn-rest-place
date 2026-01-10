@@ -8,7 +8,7 @@ export async function POST(
   try {
     const itemId = params.itemId
     const body = await request.json()
-    const { title, description, price, user1_status, user2_status } = body
+    const { title, description, price, user1_status, user2_status, categoryTags } = body
 
     if (!itemId) {
       return NextResponse.json(
@@ -31,6 +31,7 @@ export async function POST(
       title: title || undefined,
       description: description || undefined,
       price: price !== undefined ? price : undefined,
+      categoryTags: categoryTags || undefined,
       user1_status: user1_status || undefined,
       user2_status: user2_status || undefined,
     })
@@ -74,7 +75,8 @@ export async function POST(
           true, // approvedByUser1
           true, // approvedByUser2
           (updatedItem.price || 0) * 0.5, // revenueSplitUser1 - 50%
-          (updatedItem.price || 0) * 0.5  // revenueSplitUser2 - 50%
+          (updatedItem.price || 0) * 0.5, // revenueSplitUser2 - 50%
+          updatedItem.categoryTags || '[]' // categoryTags
         )
 
         console.log(`Created post with ID: ${post.id}`)

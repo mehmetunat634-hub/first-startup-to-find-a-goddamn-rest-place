@@ -707,6 +707,7 @@ export default function VideoCallContent() {
     title: string
     description: string
     price: number
+    categoryTags: string
   }) => {
     if (!pendingItemId) return
 
@@ -718,6 +719,7 @@ export default function VideoCallContent() {
           title: data.title,
           description: data.description,
           price: data.price,
+          categoryTags: data.categoryTags,
           user1_status: 'approved',
         }),
       })

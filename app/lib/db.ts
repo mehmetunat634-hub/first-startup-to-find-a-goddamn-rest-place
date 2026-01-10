@@ -7,21 +7,41 @@ const db = new Database(dbPath)
 // Enable foreign keys
 db.pragma('foreign_keys = ON')
 
-// Migration: Add missing columns to posts table
+// Migration: Add missing columns to posts and pending_items tables
 function migrateDatabase() {
   try {
-    const columnsToAdd = [
+    // Posts table columns
+    const postsColumnsToAdd = [
       { column: 'recording_session_id', type: 'TEXT', check: 'recording_session_id' },
       { column: 'approved_by_user1', type: 'BOOLEAN DEFAULT 0', check: 'approved_by_user1' },
       { column: 'approved_by_user2', type: 'BOOLEAN DEFAULT 0', check: 'approved_by_user2' },
       { column: 'revenue_split_user1', type: 'REAL DEFAULT 0', check: 'revenue_split_user1' },
       { column: 'revenue_split_user2', type: 'REAL DEFAULT 0', check: 'revenue_split_user2' },
+      { column: 'categoryTags', type: 'TEXT DEFAULT \'[]\'', check: 'categoryTags' },
     ]
 
-    for (const { column, type, check } of columnsToAdd) {
+    for (const { column, type, check } of postsColumnsToAdd) {
       try {
         db.exec(`ALTER TABLE posts ADD COLUMN ${column} ${type}`)
         console.log(`✅ Added column ${column} to posts table`)
+      } catch (error: any) {
+        if (error.message.includes('duplicate column')) {
+          // Column already exists, skip
+        } else {
+          console.error(`Error adding column ${column}:`, error)
+        }
+      }
+    }
+
+    // Pending items table columns
+    const pendingItemsColumnsToAdd = [
+      { column: 'categoryTags', type: 'TEXT DEFAULT \'[]\'', check: 'categoryTags' },
+    ]
+
+    for (const { column, type, check } of pendingItemsColumnsToAdd) {
+      try {
+        db.exec(`ALTER TABLE pending_items ADD COLUMN ${column} ${type}`)
+        console.log(`✅ Added column ${column} to pending_items table`)
       } catch (error: any) {
         if (error.message.includes('duplicate column')) {
           // Column already exists, skip
@@ -458,6 +478,7 @@ export interface PendingItem {
   title: string | null
   description: string | null
   price: number | null
+  categoryTags: string
   user1_status: 'pending' | 'approved' | 'rejected'
   user2_status: 'pending' | 'approved' | 'rejected'
   publish_platform: string | null
@@ -551,6 +572,10 @@ export function updatePendingItem(
     updates.push('published_post_id = ?')
     values.push(data.published_post_id)
   }
+  if (data.categoryTags !== undefined) {
+    updates.push('categoryTags = ?')
+    values.push(data.categoryTags)
+  }
 
   if (updates.length === 0) return item
 
@@ -622,6 +647,7 @@ export interface Post {
   thumbnailUrl: string | null
   price: number
   taggedUsers: string
+  categoryTags: string
   likes: number
   comments: number
   recording_session_id: string | null
@@ -648,12 +674,13 @@ export function createPost(
   approvedByUser1: boolean = false,
   approvedByUser2: boolean = false,
   revenueSplitUser1: number = 0,
-  revenueSplitUser2: number = 0
+  revenueSplitUser2: number = 0,
+  categoryTags: string = '[]'
 ): Post {
   const postId = Math.random().toString(36).substr(2, 12)
   const stmt = db.prepare(`
-    INSERT INTO posts (id, userId, caption, videoUrl, thumbnailUrl, price, taggedUsers, recording_session_id, approved_by_user1, approved_by_user2, revenue_split_user1, revenue_split_user2)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts (id, userId, caption, videoUrl, thumbnailUrl, price, taggedUsers, categoryTags, recording_session_id, approved_by_user1, approved_by_user2, revenue_split_user1, revenue_split_user2)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     postId,
@@ -663,6 +690,7 @@ export function createPost(
     thumbnailUrl || null,
     price,
     taggedUsers,
+    categoryTags,
     recordingSessionId || null,
     approvedByUser1 ? 1 : 0,
     approvedByUser2 ? 1 : 0,
