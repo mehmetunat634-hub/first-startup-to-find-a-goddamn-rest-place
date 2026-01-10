@@ -22,7 +22,14 @@ export async function GET() {
       }
     }).filter(s => s.user !== null)
 
-    return NextResponse.json(enrichedSessions)
+    // Deduplicate by user ID - keep only the most recent session per user
+    const deduplicatedSessions = Array.from(
+      new Map(
+        enrichedSessions.map(session => [session.user!.id, session])
+      ).values()
+    )
+
+    return NextResponse.json(deduplicatedSessions)
   } catch (error) {
     console.error('Error fetching waiting sessions:', error)
     return NextResponse.json(
