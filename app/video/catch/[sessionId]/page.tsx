@@ -206,7 +206,7 @@ export default function CatchVideoCallPage() {
         signalPollIntervalRef.current = null
       }
     }
-  }, [sessionId, userId])
+  }, [sessionId, userId, otherUserId])
 
   // Start call duration timer
   useEffect(() => {

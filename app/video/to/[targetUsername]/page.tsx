@@ -267,7 +267,7 @@ export default function TargetedVideoCallPage() {
         signalPollIntervalRef.current = null
       }
     }
-  }, [callStatus, sessionId])
+  }, [callStatus, sessionId, userId, otherUserId])
 
   // Start call duration timer
   useEffect(() => {

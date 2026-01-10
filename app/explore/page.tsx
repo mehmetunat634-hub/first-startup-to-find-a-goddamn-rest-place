@@ -82,8 +82,8 @@ export default function ExplorePage() {
 
       if (response.ok) {
         const data = await response.json()
-        // Navigate to the active call page
-        router.push(`/video/catch/${sessionId}`)
+        // Navigate to the video call page with the caught session
+        router.push(`/video-call?sessionId=${sessionId}`)
       } else {
         setCatchingSession(null)
         alert('Someone caught them first! Try another one.')
