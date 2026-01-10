@@ -37,8 +37,10 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [posts, setPosts] = useState<FeedPost[]>([])
+  const [filteredPosts, setFilteredPosts] = useState<FeedPost[]>([])
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
   const [username, setUsername] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchPosts = async () => {
     try {
@@ -130,6 +132,39 @@ export default function FeedPage() {
     }
   }
 
+  const filterPosts = (query: string, allPosts: FeedPost[]) => {
+    if (!query.trim()) {
+      return allPosts
+    }
+
+    const lowerQuery = query.toLowerCase().trim()
+
+    return allPosts.filter(post => {
+      // Search for @username mentions
+      if (lowerQuery.startsWith('@')) {
+        const usernameQuery = lowerQuery.substring(1)
+        const taggedUsers = parseTaggedUsers(post.taggedUsers)
+        return taggedUsers.some(user => user.toLowerCase().includes(usernameQuery))
+      }
+
+      // Search for keywords in caption (split by spaces)
+      const keywords = lowerQuery.split(/\s+/).filter(k => k.length > 0)
+      const caption = (post.caption || '').toLowerCase()
+      const creatorName = (post.user?.displayName || '').toLowerCase()
+
+      // All keywords must be found in either caption or creator name
+      return keywords.every(keyword =>
+        caption.includes(keyword) || creatorName.includes(keyword)
+      )
+    })
+  }
+
+  // Update filtered posts whenever search query or posts change
+  useEffect(() => {
+    const filtered = filterPosts(searchQuery, posts)
+    setFilteredPosts(filtered)
+  }, [searchQuery, posts])
+
   if (!isLoggedIn || loading) {
     return (
       <div className="home-container">
@@ -146,19 +181,21 @@ export default function FeedPage() {
       <Navbar />
       <main className="home-main">
         <div className="feed-container">
-          <div style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="feed-controls">
+            <div className="feed-search-container">
+              <input
+                type="text"
+                placeholder="Search posts... (e.g., @username or keywords)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="feed-search-input"
+              />
+            </div>
+
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#0095f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: refreshing ? 'not-allowed' : 'pointer',
-                opacity: refreshing ? 0.6 : 1,
-              }}
+              className="feed-refresh-button"
             >
               {refreshing ? 'Refreshing...' : '🔄 Refresh Feed'}
             </button>
@@ -168,9 +205,13 @@ export default function FeedPage() {
             <div className="feed-empty">
               <p>No posts yet. Start following users to see their posts!</p>
             </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="feed-empty">
+              <p>No posts match your search. Try different keywords or @usernames.</p>
+            </div>
           ) : (
             <div className="feed-grid">
-              {posts.map(post => (
+              {filteredPosts.map(post => (
                 <article key={post.id} className="feed-post">
                   {/* Post Header */}
                   <div className="post-header">
