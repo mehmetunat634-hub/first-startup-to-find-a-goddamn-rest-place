@@ -305,11 +305,20 @@ export default function FeedPage() {
                   {/* Post Video */}
                   <div className="post-video-container">
                     <video
+                      key={post.id}
                       src={post.videoUrl}
                       poster={post.thumbnailUrl || undefined}
                       controls
+                      controlsList="nodownload"
+                      preload="auto"
                       className="post-video"
                       style={{ width: '100%', display: 'block' }}
+                      onError={(e) => {
+                        console.error('Error loading video:', post.videoUrl, e)
+                      }}
+                      onLoadedMetadata={(e) => {
+                        console.log('Video metadata loaded:', post.id, (e.target as HTMLVideoElement).duration)
+                      }}
                     />
                     {(() => {
                       const price = post.price ?? 0
