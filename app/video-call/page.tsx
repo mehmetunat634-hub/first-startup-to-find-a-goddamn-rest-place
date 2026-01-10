@@ -115,6 +115,13 @@ export default function VideoCallPage() {
     }
   }, [router, sessionId])
 
+  // Auto-start search when user is loaded
+  useEffect(() => {
+    if (userId && !sessionId && !isSearching) {
+      handleFindMatch()
+    }
+  }, [userId, sessionId, isSearching, handleFindMatch])
+
   // Handle call duration timer
   useEffect(() => {
     if (!isInCall) return
@@ -228,7 +235,7 @@ export default function VideoCallPage() {
     }
   }, [sessionId, isInCall, userId, startWebRTCConnection])
 
-  const handleFindMatch = async () => {
+  const handleFindMatch = useCallback(async () => {
     if (!userId) {
       alert('User not authenticated')
       return
@@ -252,7 +259,7 @@ export default function VideoCallPage() {
       alert('Failed to start video call session')
       setIsSearching(false)
     }
-  }
+  }, [userId])
 
   const handleSkip = async () => {
     if (!sessionId) return
