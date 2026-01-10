@@ -1234,7 +1234,6 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 2rem;
 }
 
 .video-call-welcome {
@@ -1326,15 +1325,15 @@ body {
 
 .video-call-container {
   display: flex;
-  gap: 1rem;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
+  height: 100%;
   position: relative;
   overflow: hidden;
 }
 
 .video-section {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1350,7 +1349,8 @@ body {
 }
 
 .video-call-remote {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   border-radius: 12px;
   overflow: hidden;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1461,7 +1461,7 @@ body {
 .video-call-controls {
   position: absolute;
   top: 1rem;
-  left: 1rem;
+  right: 1rem;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -1527,8 +1527,9 @@ body {
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.4), 0 0 40px rgba(0, 212, 255, 0.2);
   flex-shrink: 0;
   align-self: flex-end;
-  margin-bottom: 2rem;
-  margin-right: 1rem;
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
 }
 
 .video-call-local-pip-circular video {
@@ -1550,8 +1551,8 @@ body {
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   position: absolute;
-  bottom: 1rem;
-  left: 1rem;
+  bottom: 1px;
+  left: 1px;
   backdrop-filter: blur(8px);
   z-index: 10;
 }
@@ -1713,11 +1714,11 @@ body {
 @media (max-width: 768px) {
   .video-call-container {
     flex-direction: column;
-    gap: 0.5rem;
   }
 
   .video-section {
-    flex: 1;
+    width: 100%;
+    height: 100%;
   }
 
   .video-call-welcome {
@@ -2088,7 +2089,7 @@ body {
 /* ===== VIDEO CALL PAGE STYLES - GRADIENT + GLASSMORPHISM THEME ===== */
 .video-call-container {
   width: 100%;
-  max-width: 1200px;
+  height: 100%;
   aspect-ratio: 16 / 9;
   background: var(--gradient-dark-bg);
   border-radius: var(--radius-xl);
@@ -2226,7 +2227,8 @@ body {
 }
 
 .video-call-remote {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   position: relative;
   display: flex;
   align-items: center;
@@ -2319,9 +2321,8 @@ body {
 
 .video-call-controls {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 1rem;
+  right: 1rem;
   display: flex;
   gap: 1.5rem;
   z-index: 20;
@@ -2378,8 +2379,8 @@ body {
 /* Large Tablet (768px - 1023px) */
 @media (max-width: 1023px) {
   .video-call-container {
-    max-width: 95%;
-    margin: 0 auto;
+    width: 100%;
+    height: 100%;
   }
 
   .video-call-welcome {
