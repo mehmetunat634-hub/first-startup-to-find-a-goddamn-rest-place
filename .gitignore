@@ -36,3 +36,11 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# database
+*.db
+*.sqlite
+*.sqlite3
+
+# recordings
+/public/recordings/
