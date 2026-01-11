@@ -83,23 +83,37 @@ export default function VideoCallContent() {
     const localVideo = localVideoRef.current
     const remoteVideo = remoteVideoRef.current
 
-    if (!canvas || !localVideo || !remoteVideo) return
+    if (!canvas || !localVideo || !remoteVideo) {
+      console.log('⚠️ Canvas or video elements not ready:', {
+        canvas: !!canvas,
+        localVideo: !!localVideo,
+        remoteVideo: !!remoteVideo,
+      })
+      return
+    }
 
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx) {
+      console.log('⚠️ Could not get 2D context')
+      return
+    }
 
     // Clear canvas
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
+    let framesDrawn = 0
+
     // Draw local video on the left (640x720)
     if (localVideo.readyState === 4) { // HAVE_ENOUGH_DATA = 4
       ctx.drawImage(localVideo, 0, 0, 640, 720)
+      framesDrawn++
     }
 
     // Draw remote video on the right (640x720)
     if (remoteVideo.readyState === 4) { // HAVE_ENOUGH_DATA = 4
       ctx.drawImage(remoteVideo, 640, 0, 640, 720)
+      framesDrawn++
     }
 
     // Continue drawing frames while recording
@@ -173,18 +187,24 @@ export default function VideoCallContent() {
       recordedChunksRef.current = []
       recordingStartTimeRef.current = Date.now()
 
+      let chunkCount = 0
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data)
+          chunkCount++
+          if (chunkCount % 10 === 0) {
+            console.log('📊 Recording chunks:', chunkCount, 'total size:', recordedChunksRef.current.reduce((sum, b) => sum + b.size, 0))
+          }
         }
       }
 
       mediaRecorder.onerror = (event) => {
-        console.error('Recording error:', event.error)
+        console.error('❌ Recording error:', event.error)
       }
 
+      console.log('🎬 Recording starting with codec:', options.mimeType)
       mediaRecorder.start()
-      console.log('🎬 Recording started')
+      console.log('🎬 Recording started, calling drawFramesToCanvas...')
 
       // Start drawing frames to canvas for recording
       drawFramesToCanvas()
@@ -197,20 +217,51 @@ export default function VideoCallContent() {
   const stopRecording = useCallback(async () => {
     return new Promise<string | null>(async (resolve) => {
       if (!mediaRecorderRef.current || !sessionId) {
+        console.log('⚠️ Cannot stop recording: mediaRecorder=', !!mediaRecorderRef.current, 'sessionId=', !!sessionId)
         resolve(null)
         return
       }
 
       const mediaRecorder = mediaRecorderRef.current
+      console.log('⏹️ Stopping MediaRecorder, state:', mediaRecorder.state)
+      console.log('📊 Chunks recorded:', recordedChunksRef.current.length)
 
       mediaRecorder.onstop = async () => {
+        console.log('📹 MediaRecorder stopped, processing recording...')
         try {
+          // Stop the drawing animation frame IMMEDIATELY
+          if (recordingAnimationFrameRef.current) {
+            console.log('🎨 Canceling animation frame')
+            cancelAnimationFrame(recordingAnimationFrameRef.current)
+            recordingAnimationFrameRef.current = null
+          }
+
           const recordingDuration = recordingStartTimeRef.current
             ? Math.floor((Date.now() - recordingStartTimeRef.current) / 1000)
             : 0
 
-          const blob = new Blob(recordedChunksRef.current, { type: mediaRecorder.mimeType || 'video/webm' })
+          // Create blob BEFORE clearing refs
+          const chunks = recordedChunksRef.current
+          const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'video/webm' })
           const fileSize = blob.size
+
+          console.log('📦 Recording blob created:', {
+            size: fileSize,
+            chunks: chunks.length,
+            mimeType: mediaRecorder.mimeType,
+            duration: recordingDuration,
+          })
+
+          // Clear refs after creating blob
+          mediaRecorderRef.current = null
+          recordedChunksRef.current = []
+          recordingStartTimeRef.current = null
+
+          if (fileSize === 0) {
+            console.error('❌ Recording blob is empty!')
+            resolve(null)
+            return
+          }
 
           // Upload recording to server
           const formData = new FormData()
@@ -218,6 +269,7 @@ export default function VideoCallContent() {
           formData.append('sessionId', sessionId)
           formData.append('duration', recordingDuration.toString())
 
+          console.log('📤 Uploading recording...')
           const response = await fetch('/api/video-calls/upload-recording', {
             method: 'POST',
             body: formData,
@@ -225,10 +277,11 @@ export default function VideoCallContent() {
 
           if (response.ok) {
             const data = await response.json()
-            console.log('🎬 Recording saved:', data.recordingPath)
+            console.log('✅ Recording saved:', data.recordingPath)
             resolve(data.recordingPath)
           } else {
-            console.error('Failed to upload recording')
+            const errorData = await response.text()
+            console.error('❌ Failed to upload recording:', response.status, errorData)
             resolve(null)
           }
         } catch (error) {
@@ -238,16 +291,6 @@ export default function VideoCallContent() {
       }
 
       mediaRecorder.stop()
-
-      // Stop the drawing animation frame
-      if (recordingAnimationFrameRef.current) {
-        cancelAnimationFrame(recordingAnimationFrameRef.current)
-        recordingAnimationFrameRef.current = null
-      }
-
-      mediaRecorderRef.current = null
-      recordedChunksRef.current = []
-      recordingStartTimeRef.current = null
     })
   }, [sessionId])
 
@@ -655,10 +698,15 @@ export default function VideoCallContent() {
   }
 
   const handleEndCall = async () => {
-    if (!sessionId) return
+    if (!sessionId) {
+      console.log('⚠️ No sessionId, cannot end call')
+      return
+    }
 
+    console.log('🔴 Ending call, stopping recording...')
     // Stop recording and get recording path
     const recordingPath = await stopRecording()
+    console.log('📼 Recording path:', recordingPath)
 
     try {
       await fetch('/api/video-calls/end', {
@@ -670,9 +718,11 @@ export default function VideoCallContent() {
       console.error('Error ending session:', error)
     }
 
+    console.log('👤 Matched user:', matchedUser)
     // Create pending item if recording was successful
     if (recordingPath && matchedUser) {
       try {
+        console.log('📋 Creating pending item...')
         const response = await fetch('/api/video-calls/pending-items/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -712,10 +762,15 @@ export default function VideoCallContent() {
           }
 
           return
+        } else {
+          const errorData = await response.json()
+          console.error('❌ Failed to create pending item:', response.status, errorData)
         }
       } catch (error) {
         console.error('Error creating pending item:', error)
       }
+    } else {
+      console.warn('⚠️ Cannot create pending item:', { recordingPath, matchedUser: !!matchedUser })
     }
 
     // Cleanup
